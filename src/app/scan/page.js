@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Header from "@/lib/Header";
 import { db } from "@/lib/firebase";
 import {
     collection,
@@ -13,6 +12,7 @@ import {
 } from "firebase/firestore";
 import jsQR from "jsqr";
 import ProtectedRoute from "@/lib/ProtectedRoute";
+import Header from "@/lib/Header";
 import PageTitle from "@/lib/PageTitle";
 
 export default function ScanPage() {
@@ -35,11 +35,9 @@ export default function ScanPage() {
         return `${year}-${month}-${day}`;
     }
 
-    // ---------- হাজিরা রেকর্ড করার মূল ফাংশন ----------
     async function checkIn(roll) {
         if (!roll) return;
 
-        // ১. শিক্ষার্থী খুঁজে বের করা
         const studentsRef = collection(db, "students");
         const studentQuery = query(studentsRef, where("roll", "==", roll));
         const studentSnap = await getDocs(studentQuery);
@@ -50,7 +48,6 @@ export default function ScanPage() {
         }
         const student = studentSnap.docs[0].data();
 
-        // ২. আজকে আগেই হাজিরা দিয়েছে কিনা চেক করা
         const attendanceRef = collection(db, "attendance");
         const todayQuery = query(
             attendanceRef,
@@ -64,7 +61,6 @@ export default function ScanPage() {
             return;
         }
 
-        // ৩. নতুন হাজিরা রেকর্ড সেভ করা
         const time = new Date().toLocaleTimeString("bn-BD", {
             hour: "2-digit",
             minute: "2-digit",
@@ -81,7 +77,6 @@ export default function ScanPage() {
         setTodayLog((prev) => [{ roll, name: student.name, time }, ...prev]);
     }
 
-    // ---------- ক্যামেরা চালু/বন্ধ ----------
     async function startCamera() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -109,14 +104,12 @@ export default function ScanPage() {
         setMessage("ক্যামেরা বন্ধ আছে");
     }
 
-    // ---------- প্রতি ফ্রেমে স্ক্যান করার লুপ ----------
     function scanLoop() {
         if (!scanningRef.current) return;
         const video = videoRef.current;
         const canvas = canvasRef.current;
 
         if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
-            // পারফরম্যান্সের জন্য ছোট সাইজে প্রসেস করা (আসল ভিডিও সাইজ না)
             const scale = 480 / video.videoWidth;
             canvas.width = 480;
             canvas.height = video.videoHeight * scale;
@@ -135,11 +128,9 @@ export default function ScanPage() {
                 }
             }
         }
-        // প্রতি ফ্রেমে না করে একটু বিরতি দিয়ে স্ক্যান করা (CPU বাঁচাতে)
         setTimeout(() => requestAnimationFrame(scanLoop), 150);
     }
 
-    // পেজ থেকে বেরিয়ে গেলে ক্যামেরা বন্ধ করে দেওয়া
     useEffect(() => {
         return () => stopCamera();
     }, []);
@@ -152,52 +143,91 @@ export default function ScanPage() {
     }
 
     return (
-
-
         <ProtectedRoute>
             <Header />
             <PageTitle>হাজিরা নিন</PageTitle>
             <main className="ledger-wrap">
-                <main style={{ maxWidth: 300, margin: "0 auto", padding: 20, fontFamily: "sans-serif" }}>
-
-                    <div style={{ background: "#111", borderRadius: 8, overflow: "hidden", position: "relative", aspectRatio: "4/3" }}>
-                        <video ref={videoRef} playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <div className="card-box">
+                    <div
+                        style={{
+                            background: "#111",
+                            borderRadius: 12,
+                            overflow: "hidden",
+                            position: "relative",
+                            aspectRatio: "4/3",
+                            maxWidth: 380,
+                            margin: "0 auto",
+                        }}
+                    >
+                        <video
+                            ref={videoRef}
+                            playsInline
+                            muted
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
                         <canvas ref={canvasRef} style={{ display: "none" }} />
                     </div>
 
-                    <p style={{ background: "#eee", padding: 10, borderRadius: 6, marginTop: 12 }}>{message}</p>
-
-                    <button
-                        onClick={isScanning ? stopCamera : startCamera}
-                        style={{ padding: "10px 20px", background: "#1B3A2E", color: "#fff", border: "none", borderRadius: 6 }}
+                    <p
+                        style={{
+                            background: "var(--surface-soft)",
+                            color: "var(--ink)",
+                            padding: "10px 14px",
+                            borderRadius: 8,
+                            marginTop: 14,
+                            fontSize: 14,
+                            textAlign: "center",
+                        }}
                     >
-                        {isScanning ? "ক্যামেরা বন্ধ করুন" : "ক্যামেরা চালু করুন"}
-                    </button>
+                        {message}
+                    </p>
+
+                    <div style={{ textAlign: "center" }}>
+                        <button onClick={isScanning ? stopCamera : startCamera} className="btn-primary">
+                            {isScanning ? "ক্যামেরা বন্ধ করুন" : "ক্যামেরা চালু করুন"}
+                        </button>
+                    </div>
 
                     <form onSubmit={handleManualCheckIn} style={{ marginTop: 24, display: "flex", gap: 8 }}>
                         <input
+                            className="field-input"
                             placeholder="রোল নম্বর দিয়ে ম্যানুয়ালি হাজিরা দিন"
                             value={manualRoll}
                             onChange={(e) => setManualRoll(e.target.value)}
-                            style={{ flex: 1, padding: 8 }}
                         />
-                        <button type="submit" style={{ padding: "8px 16px" }}>
+                        <button type="submit" className="btn-ghost">
                             হাজিরা দিন
                         </button>
                     </form>
+                </div>
 
-                    <h2 style={{ marginTop: 32 }}>আজকের স্ক্যান তালিকা</h2>
-                    <ul>
-                        {todayLog.map((entry, i) => (
-                            <li key={i}>
-                                {entry.name} (রোল: {entry.roll}) — {entry.time}
-                            </li>
-                        ))}
-                    </ul>
-                </main>
+                <div className="card-box">
+                    <h2 style={{ fontSize: 17, marginTop: 0 }}>আজকের স্ক্যান তালিকা</h2>
+                    {todayLog.length === 0 ? (
+                        <p style={{ color: "var(--ink-soft)", fontSize: 14 }}>এখনো কেউ হাজিরা দেয়নি।</p>
+                    ) : (
+                        todayLog.map((entry, i) => (
+                            <div
+                                key={i}
+                                style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    padding: "10px 0",
+                                    borderBottom: "1px solid var(--border)",
+                                    fontSize: 14,
+                                }}
+                            >
+                                <span>
+                                    {entry.name} <span style={{ color: "var(--ink-soft)", fontSize: 12 }}>(রোল: {entry.roll})</span>
+                                </span>
+                                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "var(--ink-soft)" }}>
+                                    {entry.time}
+                                </span>
+                            </div>
+                        ))
+                    )}
+                </div>
             </main>
         </ProtectedRoute>
-
-
     );
 }

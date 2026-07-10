@@ -5,17 +5,10 @@ import { db } from "@/lib/firebase";
 import { collection, addDoc, getDocs, serverTimestamp } from "firebase/firestore";
 import { QRCodeSVG } from "qrcode.react";
 import ProtectedRoute from "@/lib/ProtectedRoute";
-import { useAuth } from "@/lib/AuthContext";
 import Header from "@/lib/Header";
 import PageTitle from "@/lib/PageTitle";
 
-
-
-
-
-
 export default function Home() {
-  const { logout } = useAuth();
   const [name, setName] = useState("");
   const [roll, setRoll] = useState("");
   const [level, setLevel] = useState("ইন্টারমিডিয়েট");
@@ -23,7 +16,6 @@ export default function Home() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // পেজ লোড হলে সব শিক্ষার্থী নিয়ে আসা
   async function loadStudents() {
     setLoading(true);
     const snapshot = await getDocs(collection(db, "students"));
@@ -36,7 +28,6 @@ export default function Home() {
     loadStudents();
   }, []);
 
-  // নতুন শিক্ষার্থী যোগ করা
   async function handleAddStudent(e) {
     e.preventDefault();
     if (!name.trim() || !roll.trim()) {
@@ -50,77 +41,76 @@ export default function Home() {
       department: department.trim() || "—",
       createdAt: serverTimestamp(),
     });
-
     setName("");
     setRoll("");
     setDepartment("");
-    loadStudents(); // তালিকা রিফ্রেশ করা
+    loadStudents();
   }
 
   return (
-
     <ProtectedRoute>
       <Header />
       <PageTitle>শিক্ষার্থী তালিকা</PageTitle>
       <main className="ledger-wrap">
+        <div className="card-box">
+          <h2 style={{ fontSize: 17, marginTop: 0 }}>নতুন শিক্ষার্থী যোগ করুন</h2>
+          <form onSubmit={handleAddStudent} style={{ display: "grid", gap: 12 }}>
+            <input
+              className="field-input"
+              placeholder="নাম"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <input
+              className="field-input"
+              placeholder="রোল নম্বর"
+              value={roll}
+              onChange={(e) => setRoll(e.target.value)}
+            />
+            <select className="field-select" value={level} onChange={(e) => setLevel(e.target.value)}>
+              <option>ইন্টারমিডিয়েট</option>
+              <option>অনার্স</option>
+              <option>মাস্টার্স</option>
+            </select>
+            <input
+              className="field-input"
+              placeholder="বিভাগ / শ্রেণি"
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+            />
+            <button type="submit" className="btn-primary">
+              শিক্ষার্থী যোগ করুন
+            </button>
+          </form>
+        </div>
 
-
-
-
-        <form onSubmit={handleAddStudent} style={{ marginBottom: 32, display: "grid", gap: 12 }}>
-          <input
-            placeholder="নাম"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            style={{ padding: 8 }}
-          />
-          <input
-            placeholder="রোল নম্বর"
-            value={roll}
-            onChange={(e) => setRoll(e.target.value)}
-            style={{ padding: 8 }}
-          />
-          <select value={level} onChange={(e) => setLevel(e.target.value)} style={{ padding: 8 }}>
-            <option>ইন্টারমিডিয়েট</option>
-            <option>অনার্স</option>
-            <option>মাস্টার্স</option>
-          </select>
-          <input
-            placeholder="বিভাগ / শ্রেণি"
-            value={department}
-            onChange={(e) => setDepartment(e.target.value)}
-            style={{ padding: 8 }}
-          />
-          <button type="submit" style={{ padding: 10, background: "#1B3A2E", color: "#fff", border: "none", borderRadius: 6 }}>
-            শিক্ষার্থী যোগ করুন
-          </button>
-        </form>
-
-        <h2>মোট {students.length} জন শিক্ষার্থী</h2>
-        {loading ? (
-          <p>লোড হচ্ছে...</p>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
-            {students.map((s) => (
-              <div key={s.id} style={{ border: "1px solid #ccc", borderRadius: 8, padding: 16, display: "flex", gap: 12, alignItems: "center" }}>
-                <QRCodeSVG value={`ATTEND:${s.roll}`} size={140} />
-
-                <div>
-                  <div style={{ fontWeight: "bold" }}>{s.name}</div>
-                  <div style={{ fontSize: 13, color: "#555" }}>রোল: {s.roll}</div>
-                  <div style={{ fontSize: 13, color: "#555" }}>{s.level}</div>
-                  <div style={{ fontSize: 13, color: "#555" }}>{s.department}</div>
+        <div className="card-box">
+          <h2 style={{ fontSize: 17, marginTop: 0 }}>মোট {students.length} জন শিক্ষার্থী</h2>
+          {loading ? (
+            <p style={{ color: "var(--ink-soft)" }}>লোড হচ্ছে...</p>
+          ) : (
+            <div className="id-card-grid">
+              {students.map((s) => (
+                <div key={s.id} className="id-card">
+                  <div className="id-body">
+                    <QRCodeSVG value={`ATTEND:${s.roll}`} size={70} />
+                    <div>
+                      <div className="name">{s.name}</div>
+                      <div className="meta">
+                        রোল: <b>{s.roll}</b>
+                        <br />
+                        {s.level}
+                        <br />
+                        {s.department}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </main>
-
     </ProtectedRoute>
-
-
-
-
   );
 }
