@@ -39,6 +39,7 @@ export default function Header({ title }) {
                     <Link href="/" style={{ color: "var(--indigo-dark)" }}>শিক্ষার্থী তালিকা</Link>
                     <Link href="/scan" style={{ color: "var(--indigo-dark)" }}>হাজিরা নিন</Link>
                     <Link href="/dashboard" style={{ color: "var(--indigo-dark)" }}>ড্যাশবোর্ড</Link>
+                    <Link href="/reports" style={{ color: "var(--indigo-dark)" }}>রিপোর্ট</Link>
                 </nav>
             </div>
             <button
