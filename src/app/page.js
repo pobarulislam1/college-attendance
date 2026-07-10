@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, getDocs, serverTimestamp } from "firebase/firestore";
+import { QRCodeSVG } from "qrcode.react";
 
 export default function Home() {
   const [name, setName] = useState("");
@@ -82,13 +83,19 @@ export default function Home() {
       {loading ? (
         <p>লোড হচ্ছে...</p>
       ) : (
-        <ul>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
           {students.map((s) => (
-            <li key={s.id}>
-              {s.name} — রোল: {s.roll} — {s.level} — {s.department}
-            </li>
+            <div key={s.id} style={{ border: "1px solid #ccc", borderRadius: 8, padding: 16, display: "flex", gap: 12, alignItems: "center" }}>
+              <QRCodeSVG value={`ATTEND:${s.roll}`} size={70} />
+              <div>
+                <div style={{ fontWeight: "bold" }}>{s.name}</div>
+                <div style={{ fontSize: 13, color: "#555" }}>রোল: {s.roll}</div>
+                <div style={{ fontSize: 13, color: "#555" }}>{s.level}</div>
+                <div style={{ fontSize: 13, color: "#555" }}>{s.department}</div>
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </main>
   );
