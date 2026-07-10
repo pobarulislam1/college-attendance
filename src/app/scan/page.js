@@ -22,6 +22,8 @@ export default function ScanPage() {
     const scanningRef = useRef(false);
     const lastScanRef = useRef(0);
 
+    const [lastPhoto, setLastPhoto] = useState(null);
+
     const [message, setMessage] = useState("ক্যামেরা চালু করতে নিচের বাটনে চাপুন");
     const [isScanning, setIsScanning] = useState(false);
     const [manualRoll, setManualRoll] = useState("");
@@ -32,10 +34,21 @@ export default function ScanPage() {
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, "0");
         const day = String(d.getDate()).padStart(2, "0");
-        return `${year}-${month}-${day}`;
+        return year + "-" + month + "-" + day;
     }
 
-    async function checkIn(roll) {
+    function makeThumbnail(video) {
+        const thumbCanvas = document.createElement("canvas");
+        const targetWidth = 160;
+        const scale = targetWidth / video.videoWidth;
+        thumbCanvas.width = targetWidth;
+        thumbCanvas.height = video.videoHeight * scale;
+        const ctx = thumbCanvas.getContext("2d");
+        ctx.drawImage(video, 0, 0, thumbCanvas.width, thumbCanvas.height);
+        return thumbCanvas.toDataURL("image/jpeg", 0.5);
+    }
+
+    async function checkIn(roll, photoDataUrl) {
         if (!roll) return;
 
         const studentsRef = collection(db, "students");
@@ -43,7 +56,7 @@ export default function ScanPage() {
         const studentSnap = await getDocs(studentQuery);
 
         if (studentSnap.empty) {
-            setMessage(`অজানা কোড — রোল ${roll} এর কোনো শিক্ষার্থী নেই`);
+            setMessage("অজানা কোড — রোল " + roll + " এর কোনো শিক্ষার্থী নেই");
             return;
         }
         const student = studentSnap.docs[0].data();
@@ -57,7 +70,7 @@ export default function ScanPage() {
         const existing = await getDocs(todayQuery);
 
         if (!existing.empty) {
-            setMessage(`${student.name} — আগেই হাজিরা দেওয়া হয়েছে`);
+            setMessage(student.name + " — আগেই হাজিরা দেওয়া হয়েছে");
             return;
         }
 
@@ -65,16 +78,30 @@ export default function ScanPage() {
             hour: "2-digit",
             minute: "2-digit",
         });
+
+        const photoToSave = photoDataUrl ? photoDataUrl : null;
+
         await addDoc(attendanceRef, {
-            roll,
+            roll: roll,
             studentName: student.name,
             date: todayKey(),
-            time,
+            time: time,
             createdAt: serverTimestamp(),
+            photo: photoToSave,
         });
 
-        setMessage(`✓ ${student.name} — হাজিরা নেওয়া হয়েছে`);
-        setTodayLog((prev) => [{ roll, name: student.name, time }, ...prev]);
+        setMessage("✓ " + student.name + " — হাজিরা নেওয়া হয়েছে");
+
+        const newEntry = {
+            roll: roll,
+            name: student.name,
+            time: time,
+            photo: photoToSave,
+        };
+        setTodayLog(function (prev) {
+            const updated = [newEntry].concat(prev);
+            return updated;
+        });
     }
 
     async function startCamera() {
@@ -98,7 +125,10 @@ export default function ScanPage() {
         scanningRef.current = false;
         setIsScanning(false);
         if (streamRef.current) {
-            streamRef.current.getTracks().forEach((t) => t.stop());
+            const tracks = streamRef.current.getTracks();
+            for (let i = 0; i < tracks.length; i++) {
+                tracks[i].stop();
+            }
             streamRef.current = null;
         }
         setMessage("ক্যামেরা বন্ধ আছে");
@@ -119,26 +149,33 @@ export default function ScanPage() {
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const code = jsQR(imageData.data, imageData.width, imageData.height);
 
-            if (code && code.data && code.data.startsWith("ATTEND:")) {
+            if (code && code.data && code.data.indexOf("ATTEND:") === 0) {
                 const now = Date.now();
                 if (now - lastScanRef.current > 2000) {
                     lastScanRef.current = now;
                     const roll = code.data.replace("ATTEND:", "");
-                    checkIn(roll);
+                    const thumbnail = makeThumbnail(video);
+                    console.log("Thumbnail তৈরি হয়েছে, দৈর্ঘ্য:", thumbnail ? thumbnail.length : "কিছুই তৈরি হয়নি");
+                    setLastPhoto(thumbnail);
+                    checkIn(roll, thumbnail);
                 }
             }
         }
-        setTimeout(() => requestAnimationFrame(scanLoop), 150);
+        setTimeout(function () {
+            requestAnimationFrame(scanLoop);
+        }, 150);
     }
 
-    useEffect(() => {
-        return () => stopCamera();
+    useEffect(function () {
+        return function () {
+            stopCamera();
+        };
     }, []);
 
     function handleManualCheckIn(e) {
         e.preventDefault();
         if (!manualRoll.trim()) return;
-        checkIn(manualRoll.trim());
+        checkIn(manualRoll.trim(), null);
         setManualRoll("");
     }
 
@@ -168,19 +205,20 @@ export default function ScanPage() {
                         <canvas ref={canvasRef} style={{ display: "none" }} />
                     </div>
 
-                    <p
-                        style={{
-                            background: "var(--surface-soft)",
-                            color: "var(--ink)",
-                            padding: "10px 14px",
-                            borderRadius: 8,
-                            marginTop: 14,
-                            fontSize: 14,
-                            textAlign: "center",
-                        }}
-                    >
-                        {message}
-                    </p>
+                    {lastPhoto && (
+                        <div style={{ textAlign: "center", marginTop: 12 }}>
+                            <p style={{ fontSize: 12, color: "var(--ink-soft)", marginBottom: 6 }}>
+                                সর্বশেষ ধারণকৃত ছবি:
+                            </p>
+                            <img
+                                src={lastPhoto}
+                                alt="সর্বশেষ ছবি"
+                                style={{ width: 120, height: 90, objectFit: "cover", borderRadius: 8, border: "2px solid var(--indigo)" }}
+                            />
+                        </div>
+                    )}
+
+                    <p />
 
                     <div style={{ textAlign: "center" }}>
                         <button onClick={isScanning ? stopCamera : startCamera} className="btn-primary">
@@ -206,25 +244,60 @@ export default function ScanPage() {
                     {todayLog.length === 0 ? (
                         <p style={{ color: "var(--ink-soft)", fontSize: 14 }}>এখনো কেউ হাজিরা দেয়নি।</p>
                     ) : (
-                        todayLog.map((entry, i) => (
-                            <div
-                                key={i}
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    padding: "10px 0",
-                                    borderBottom: "1px solid var(--border)",
-                                    fontSize: 14,
-                                }}
-                            >
-                                <span>
-                                    {entry.name} <span style={{ color: "var(--ink-soft)", fontSize: 12 }}>(রোল: {entry.roll})</span>
-                                </span>
-                                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "var(--ink-soft)" }}>
-                                    {entry.time}
-                                </span>
-                            </div>
-                        ))
+                        todayLog.map(function (entry, i) {
+                            return (
+                                <div
+                                    key={i}
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 12,
+                                        padding: "10px 0",
+                                        borderBottom: "1px solid var(--border)",
+                                        fontSize: 14,
+                                    }}
+                                >
+                                    {entry.photo ? (
+                                        <img
+                                            src={entry.photo}
+                                            alt="প্রমাণ"
+                                            style={{
+                                                width: 40,
+                                                height: 40,
+                                                borderRadius: 8,
+                                                objectFit: "cover",
+                                                flexShrink: 0,
+                                            }}
+                                        />
+                                    ) : (
+                                        <div
+                                            style={{
+                                                width: 40,
+                                                height: 40,
+                                                borderRadius: 8,
+                                                background: "var(--surface-soft)",
+                                                flexShrink: 0,
+                                            }}
+                                        />
+                                    )}
+                                    <span style={{ flex: 1 }}>
+                                        {entry.name}{" "}
+                                        <span style={{ color: "var(--ink-soft)", fontSize: 12 }}>
+                                            (রোল: {entry.roll})
+                                        </span>
+                                    </span>
+                                    <span
+                                        style={{
+                                            fontFamily: "'JetBrains Mono', monospace",
+                                            fontSize: 12,
+                                            color: "var(--ink-soft)",
+                                        }}
+                                    >
+                                        {entry.time}
+                                    </span>
+                                </div>
+                            );
+                        })
                     )}
                 </div>
             </main>
