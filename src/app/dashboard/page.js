@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import ProtectedRoute from "@/lib/ProtectedRoute";
+import Header from "@/lib/Header";
 
 export default function DashboardPage() {
     const [students, setStudents] = useState([]);
@@ -50,7 +51,7 @@ export default function DashboardPage() {
     return (
         <ProtectedRoute>
             <main style={{ maxWidth: 800, margin: "0 auto", padding: 24, fontFamily: "sans-serif" }}>
-                <h1>হাজিরার ড্যাশবোর্ড</h1>
+                <Header title="হাজিরার ড্যাশবোর্ড" />
 
                 <div style={{ marginBottom: 24 }}>
                     <label style={{ marginRight: 8, fontWeight: "bold" }}>তারিখ:</label>

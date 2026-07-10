@@ -6,6 +6,7 @@ import { collection, addDoc, getDocs, serverTimestamp } from "firebase/firestore
 import { QRCodeSVG } from "qrcode.react";
 import ProtectedRoute from "@/lib/ProtectedRoute";
 import { useAuth } from "@/lib/AuthContext";
+import Header from "@/lib/Header";
 
 
 
@@ -59,13 +60,8 @@ export default function Home() {
 
     <ProtectedRoute>
       <main style={{ maxWidth: 700, margin: "0 auto", padding: 24, fontFamily: "sans-serif" }}>
-        <h1>শিক্ষার্থী তালিকা</h1>
-        <button
-          onClick={logout}
-          style={{ marginBottom: 16, padding: "6px 14px", background: "#A3272B", color: "#fff", border: "none", borderRadius: 6 }}
-        >
-          লগআউট
-        </button>
+        <Header title="শিক্ষার্থী তালিকা" />
+
 
         <form onSubmit={handleAddStudent} style={{ marginBottom: 32, display: "grid", gap: 12 }}>
           <input

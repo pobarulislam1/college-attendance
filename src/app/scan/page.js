@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Header from "@/lib/Header";
 import { db } from "@/lib/firebase";
 import {
     collection,
@@ -152,7 +153,7 @@ export default function ScanPage() {
     return (
         <ProtectedRoute>
             <main style={{ maxWidth: 700, margin: "0 auto", padding: 24, fontFamily: "sans-serif" }}>
-                <h1>হাজিরা নিন</h1>
+                <Header title="হাজিরা নিন" />
 
                 <div style={{ background: "#111", borderRadius: 8, overflow: "hidden", position: "relative", aspectRatio: "4/3" }}>
                     <video ref={videoRef} playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
