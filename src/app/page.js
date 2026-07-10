@@ -7,6 +7,7 @@ import { QRCodeSVG } from "qrcode.react";
 import ProtectedRoute from "@/lib/ProtectedRoute";
 import { useAuth } from "@/lib/AuthContext";
 import Header from "@/lib/Header";
+import PageTitle from "@/lib/PageTitle";
 
 
 
@@ -59,7 +60,8 @@ export default function Home() {
   return (
 
     <ProtectedRoute>
-      <Header title="শিক্ষার্থী তালিকা" />
+      <Header />
+      <PageTitle>শিক্ষার্থী তালিকা</PageTitle>
       <main className="ledger-wrap">
 
 

@@ -154,10 +154,9 @@ export default function ScanPage() {
 
 
         <ProtectedRoute>
-            <Header title="শিক্ষার্থী তালিকা" />
+            <Header title="হাজিরা নিন" />
             <main className="ledger-wrap">
                 <main style={{ maxWidth: 500, margin: "0 auto", padding: 24, fontFamily: "sans-serif" }}>
-
 
                     <div style={{ background: "#111", borderRadius: 8, overflow: "hidden", position: "relative", aspectRatio: "4/3" }}>
                         <video ref={videoRef} playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
