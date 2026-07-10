@@ -152,7 +152,7 @@ export default function ScanPage() {
 
     return (
         <ProtectedRoute>
-            <main style={{ maxWidth: 700, margin: "0 auto", padding: 24, fontFamily: "sans-serif" }}>
+            <main style={{ maxWidth: 400, margin: "0 auto", padding: 24, fontFamily: "sans-serif" }}>
                 <Header title="হাজিরা নিন" />
 
                 <div style={{ background: "#111", borderRadius: 8, overflow: "hidden", position: "relative", aspectRatio: "4/3" }}>
