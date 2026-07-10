@@ -86,7 +86,8 @@ export default function Home() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
           {students.map((s) => (
             <div key={s.id} style={{ border: "1px solid #ccc", borderRadius: 8, padding: 16, display: "flex", gap: 12, alignItems: "center" }}>
-              <QRCodeSVG value={`ATTEND:${s.roll}`} size={70} />
+              <QRCodeSVG value={`ATTEND:${s.roll}`} size={140} />
+
               <div>
                 <div style={{ fontWeight: "bold" }}>{s.name}</div>
                 <div style={{ fontSize: 13, color: "#555" }}>রোল: {s.roll}</div>
