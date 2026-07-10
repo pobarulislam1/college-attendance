@@ -11,6 +11,7 @@ import {
     serverTimestamp,
 } from "firebase/firestore";
 import jsQR from "jsqr";
+import ProtectedRoute from "@/lib/ProtectedRoute";
 
 export default function ScanPage() {
     const videoRef = useRef(null);
@@ -149,43 +150,45 @@ export default function ScanPage() {
     }
 
     return (
-        <main style={{ maxWidth: 700, margin: "0 auto", padding: 24, fontFamily: "sans-serif" }}>
-            <h1>হাজিরা নিন</h1>
+        <ProtectedRoute>
+            <main style={{ maxWidth: 700, margin: "0 auto", padding: 24, fontFamily: "sans-serif" }}>
+                <h1>হাজিরা নিন</h1>
 
-            <div style={{ background: "#111", borderRadius: 8, overflow: "hidden", position: "relative", aspectRatio: "4/3" }}>
-                <video ref={videoRef} playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                <canvas ref={canvasRef} style={{ display: "none" }} />
-            </div>
+                <div style={{ background: "#111", borderRadius: 8, overflow: "hidden", position: "relative", aspectRatio: "4/3" }}>
+                    <video ref={videoRef} playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <canvas ref={canvasRef} style={{ display: "none" }} />
+                </div>
 
-            <p style={{ background: "#eee", padding: 10, borderRadius: 6, marginTop: 12 }}>{message}</p>
+                <p style={{ background: "#eee", padding: 10, borderRadius: 6, marginTop: 12 }}>{message}</p>
 
-            <button
-                onClick={isScanning ? stopCamera : startCamera}
-                style={{ padding: "10px 20px", background: "#1B3A2E", color: "#fff", border: "none", borderRadius: 6 }}
-            >
-                {isScanning ? "ক্যামেরা বন্ধ করুন" : "ক্যামেরা চালু করুন"}
-            </button>
-
-            <form onSubmit={handleManualCheckIn} style={{ marginTop: 24, display: "flex", gap: 8 }}>
-                <input
-                    placeholder="রোল নম্বর দিয়ে ম্যানুয়ালি হাজিরা দিন"
-                    value={manualRoll}
-                    onChange={(e) => setManualRoll(e.target.value)}
-                    style={{ flex: 1, padding: 8 }}
-                />
-                <button type="submit" style={{ padding: "8px 16px" }}>
-                    হাজিরা দিন
+                <button
+                    onClick={isScanning ? stopCamera : startCamera}
+                    style={{ padding: "10px 20px", background: "#1B3A2E", color: "#fff", border: "none", borderRadius: 6 }}
+                >
+                    {isScanning ? "ক্যামেরা বন্ধ করুন" : "ক্যামেরা চালু করুন"}
                 </button>
-            </form>
 
-            <h2 style={{ marginTop: 32 }}>আজকের স্ক্যান তালিকা</h2>
-            <ul>
-                {todayLog.map((entry, i) => (
-                    <li key={i}>
-                        {entry.name} (রোল: {entry.roll}) — {entry.time}
-                    </li>
-                ))}
-            </ul>
-        </main>
+                <form onSubmit={handleManualCheckIn} style={{ marginTop: 24, display: "flex", gap: 8 }}>
+                    <input
+                        placeholder="রোল নম্বর দিয়ে ম্যানুয়ালি হাজিরা দিন"
+                        value={manualRoll}
+                        onChange={(e) => setManualRoll(e.target.value)}
+                        style={{ flex: 1, padding: 8 }}
+                    />
+                    <button type="submit" style={{ padding: "8px 16px" }}>
+                        হাজিরা দিন
+                    </button>
+                </form>
+
+                <h2 style={{ marginTop: 32 }}>আজকের স্ক্যান তালিকা</h2>
+                <ul>
+                    {todayLog.map((entry, i) => (
+                        <li key={i}>
+                            {entry.name} (রোল: {entry.roll}) — {entry.time}
+                        </li>
+                    ))}
+                </ul>
+            </main>
+        </ProtectedRoute>
     );
 }

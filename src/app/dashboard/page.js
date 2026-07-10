@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
+import ProtectedRoute from "@/lib/ProtectedRoute";
 
 export default function DashboardPage() {
     const [students, setStudents] = useState([]);
@@ -47,79 +48,81 @@ export default function DashboardPage() {
     const percent = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
 
     return (
-        <main style={{ maxWidth: 800, margin: "0 auto", padding: 24, fontFamily: "sans-serif" }}>
-            <h1>হাজিরার ড্যাশবোর্ড</h1>
+        <ProtectedRoute>
+            <main style={{ maxWidth: 800, margin: "0 auto", padding: 24, fontFamily: "sans-serif" }}>
+                <h1>হাজিরার ড্যাশবোর্ড</h1>
 
-            <div style={{ marginBottom: 24 }}>
-                <label style={{ marginRight: 8, fontWeight: "bold" }}>তারিখ:</label>
-                <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    style={{ padding: 6 }}
-                />
-                <button onClick={loadData} style={{ marginLeft: 8, padding: "6px 14px" }}>
-                    রিফ্রেশ করুন
-                </button>
-            </div>
+                <div style={{ marginBottom: 24 }}>
+                    <label style={{ marginRight: 8, fontWeight: "bold" }}>তারিখ:</label>
+                    <input
+                        type="date"
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        style={{ padding: 6 }}
+                    />
+                    <button onClick={loadData} style={{ marginLeft: 8, padding: "6px 14px" }}>
+                        রিফ্রেশ করুন
+                    </button>
+                </div>
 
-            {loading ? (
-                <p>লোড হচ্ছে...</p>
-            ) : (
-                <>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
-                        <StatBox label="মোট শিক্ষার্থী" value={totalCount} />
-                        <StatBox label="উপস্থিত" value={presentCount} color="#1B3A2E" />
-                        <StatBox label="অনুপস্থিত" value={absentCount} color="#A3272B" />
-                        <StatBox label="হাজিরার হার" value={`${percent}%`} />
-                    </div>
+                {loading ? (
+                    <p>লোড হচ্ছে...</p>
+                ) : (
+                    <>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
+                            <StatBox label="মোট শিক্ষার্থী" value={totalCount} />
+                            <StatBox label="উপস্থিত" value={presentCount} color="#1B3A2E" />
+                            <StatBox label="অনুপস্থিত" value={absentCount} color="#A3272B" />
+                            <StatBox label="হাজিরার হার" value={`${percent}%`} />
+                        </div>
 
-                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                        <thead>
-                            <tr style={{ borderBottom: "2px solid #1B3A2E", textAlign: "left" }}>
-                                <th style={{ padding: 8 }}>রোল</th>
-                                <th style={{ padding: 8 }}>নাম</th>
-                                <th style={{ padding: 8 }}>স্তর / বিভাগ</th>
-                                <th style={{ padding: 8 }}>অবস্থা</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {students
-                                .slice()
-                                .sort((a, b) => a.roll.localeCompare(b.roll))
-                                .map((s) => {
-                                    const isPresent = presentRolls.has(s.roll);
-                                    return (
-                                        <tr key={s.id} style={{ borderBottom: "1px solid #ddd" }}>
-                                            <td style={{ padding: 8 }}>{s.roll}</td>
-                                            <td style={{ padding: 8 }}>{s.name}</td>
-                                            <td style={{ padding: 8 }}>
-                                                {s.level} · {s.department}
-                                            </td>
-                                            <td style={{ padding: 8 }}>
-                                                <span
-                                                    style={{
-                                                        padding: "3px 10px",
-                                                        borderRadius: 20,
-                                                        fontSize: 12,
-                                                        fontWeight: "bold",
-                                                        background: isPresent ? "#e4efe8" : "#f6e4e2",
-                                                        color: isPresent ? "#1B3A2E" : "#A3272B",
-                                                    }}
-                                                >
-                                                    {isPresent ? "উপস্থিত" : "অনুপস্থিত"}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                        </tbody>
-                    </table>
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                            <thead>
+                                <tr style={{ borderBottom: "2px solid #1B3A2E", textAlign: "left" }}>
+                                    <th style={{ padding: 8 }}>রোল</th>
+                                    <th style={{ padding: 8 }}>নাম</th>
+                                    <th style={{ padding: 8 }}>স্তর / বিভাগ</th>
+                                    <th style={{ padding: 8 }}>অবস্থা</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {students
+                                    .slice()
+                                    .sort((a, b) => a.roll.localeCompare(b.roll))
+                                    .map((s) => {
+                                        const isPresent = presentRolls.has(s.roll);
+                                        return (
+                                            <tr key={s.id} style={{ borderBottom: "1px solid #ddd" }}>
+                                                <td style={{ padding: 8 }}>{s.roll}</td>
+                                                <td style={{ padding: 8 }}>{s.name}</td>
+                                                <td style={{ padding: 8 }}>
+                                                    {s.level} · {s.department}
+                                                </td>
+                                                <td style={{ padding: 8 }}>
+                                                    <span
+                                                        style={{
+                                                            padding: "3px 10px",
+                                                            borderRadius: 20,
+                                                            fontSize: 12,
+                                                            fontWeight: "bold",
+                                                            background: isPresent ? "#e4efe8" : "#f6e4e2",
+                                                            color: isPresent ? "#1B3A2E" : "#A3272B",
+                                                        }}
+                                                    >
+                                                        {isPresent ? "উপস্থিত" : "অনুপস্থিত"}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                            </tbody>
+                        </table>
 
-                    {totalCount === 0 && <p>কোনো শিক্ষার্থী নেই। প্রথমে হোমপেজ থেকে শিক্ষার্থী যোগ করুন।</p>}
-                </>
-            )}
-        </main>
+                        {totalCount === 0 && <p>কোনো শিক্ষার্থী নেই। প্রথমে হোমপেজ থেকে শিক্ষার্থী যোগ করুন।</p>}
+                    </>
+                )}
+            </main>
+        </ProtectedRoute>
     );
 }
 
