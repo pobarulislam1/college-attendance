@@ -5,6 +5,7 @@ import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import ProtectedRoute from "@/lib/ProtectedRoute";
 import Header from "@/lib/Header";
+import PageTitle from "@/lib/PageTitle";
 
 export default function DashboardPage() {
     const [students, setStudents] = useState([]);
@@ -50,8 +51,10 @@ export default function DashboardPage() {
 
     return (
         <ProtectedRoute>
-            <Header title="হাজিরার ড্যাশবোর্ড" />
+            <Header />
+            <PageTitle>হাজিরার ড্যাশবোর্ড</PageTitle>
             <main className="ledger-wrap">
+
 
 
 

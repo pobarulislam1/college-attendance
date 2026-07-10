@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import jsQR from "jsqr";
 import ProtectedRoute from "@/lib/ProtectedRoute";
+import PageTitle from "@/lib/PageTitle";
 
 export default function ScanPage() {
     const videoRef = useRef(null);
@@ -154,9 +155,10 @@ export default function ScanPage() {
 
 
         <ProtectedRoute>
-            <Header title="হাজিরা নিন" />
+            <Header />
+            <PageTitle>হাজিরা নিন</PageTitle>
             <main className="ledger-wrap">
-                <main style={{ maxWidth: 500, margin: "0 auto", padding: 24, fontFamily: "sans-serif" }}>
+                <main style={{ maxWidth: 300, margin: "0 auto", padding: 20, fontFamily: "sans-serif" }}>
 
                     <div style={{ background: "#111", borderRadius: 8, overflow: "hidden", position: "relative", aspectRatio: "4/3" }}>
                         <video ref={videoRef} playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
