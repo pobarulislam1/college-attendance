@@ -11,6 +11,7 @@ export default function DashboardPage() {
     const [students, setStudents] = useState([]);
     const [attendance, setAttendance] = useState([]);
     const [selectedDate, setSelectedDate] = useState(todayKey());
+    const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(true);
 
     function todayKey() {
@@ -47,6 +48,15 @@ export default function DashboardPage() {
     const absentCount = totalCount - presentCount;
     const percent = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
 
+    const filteredStudents = students
+        .slice()
+        .filter((s) => {
+            const q = search.trim().toLowerCase();
+            if (!q) return true;
+            return s.name.toLowerCase().includes(q) || s.roll.toLowerCase().includes(q);
+        })
+        .sort((a, b) => a.roll.localeCompare(b.roll));
+
     return (
         <ProtectedRoute>
             <Header />
@@ -64,6 +74,13 @@ export default function DashboardPage() {
                     <button onClick={loadData} className="btn-ghost">
                         রিফ্রেশ করুন
                     </button>
+                    <input
+                        className="field-input"
+                        placeholder="নাম বা রোল দিয়ে খুঁজুন..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        style={{ flex: 1, minWidth: 180 }}
+                    />
                 </div>
 
                 {loading ? (
@@ -88,32 +105,29 @@ export default function DashboardPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {students
-                                        .slice()
-                                        .sort((a, b) => a.roll.localeCompare(b.roll))
-                                        .map((s) => {
-                                            const isPresent = presentRolls.has(s.roll);
-                                            return (
-                                                <tr key={s.id}>
-                                                    <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{s.roll}</td>
-                                                    <td>{s.name}</td>
-                                                    <td>
-                                                        {s.level} · {s.department}
-                                                    </td>
-                                                    <td>
-                                                        <span className={`status-pill ${isPresent ? "status-present" : "status-absent"}`}>
-                                                            {isPresent ? "উপস্থিত" : "অনুপস্থিত"}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
+                                    {filteredStudents.map((s) => {
+                                        const isPresent = presentRolls.has(s.roll);
+                                        return (
+                                            <tr key={s.id}>
+                                                <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{s.roll}</td>
+                                                <td>{s.name}</td>
+                                                <td>
+                                                    {s.level} · {s.department}
+                                                </td>
+                                                <td>
+                                                    <span className={`status-pill ${isPresent ? "status-present" : "status-absent"}`}>
+                                                        {isPresent ? "উপস্থিত" : "অনুপস্থিত"}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
 
-                            {totalCount === 0 && (
+                            {filteredStudents.length === 0 && (
                                 <p style={{ color: "var(--ink-soft)", marginTop: 12 }}>
-                                    কোনো শিক্ষার্থী নেই। প্রথমে হোমপেজ থেকে শিক্ষার্থী যোগ করুন।
+                                    কোনো শিক্ষার্থী পাওয়া যায়নি।
                                 </p>
                             )}
                         </div>

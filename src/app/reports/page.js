@@ -77,7 +77,7 @@ export default function ReportsPage() {
 
     return (
         <ProtectedRoute>
-            <Header title="রিপোর্ট" />
+            <Header />
             <PageTitle>হাজিরার রিপোর্ট</PageTitle>
             <main className="ledger-wrap">
                 <div className="card-box" style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
