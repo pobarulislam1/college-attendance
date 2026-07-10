@@ -50,8 +50,10 @@ export default function DashboardPage() {
 
     return (
         <ProtectedRoute>
-            <main style={{ maxWidth: 800, margin: "0 auto", padding: 24, fontFamily: "sans-serif" }}>
-                <Header title="হাজিরার ড্যাশবোর্ড" />
+            <Header title="হাজিরার ড্যাশবোর্ড" />
+            <main className="ledger-wrap">
+
+
 
                 <div style={{ marginBottom: 24 }}>
                     <label style={{ marginRight: 8, fontWeight: "bold" }}>তারিখ:</label>

@@ -59,8 +59,10 @@ export default function Home() {
   return (
 
     <ProtectedRoute>
-      <main style={{ maxWidth: 700, margin: "0 auto", padding: 24, fontFamily: "sans-serif" }}>
-        <Header title="শিক্ষার্থী তালিকা" />
+      <Header title="শিক্ষার্থী তালিকা" />
+      <main className="ledger-wrap">
+
+
 
 
         <form onSubmit={handleAddStudent} style={{ marginBottom: 32, display: "grid", gap: 12 }}>
@@ -112,7 +114,11 @@ export default function Home() {
           </div>
         )}
       </main>
+
     </ProtectedRoute>
+
+
+
 
   );
 }
