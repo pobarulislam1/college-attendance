@@ -112,7 +112,7 @@ export default function DashboardPage() {
                                                 <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{s.roll}</td>
                                                 <td>{s.name}</td>
                                                 <td>
-                                                    {s.level} · {s.department}
+                                                    {s.level} {s.year ? `· ${s.year}` : ""} · {s.department}
                                                 </td>
                                                 <td>
                                                     <span className={`status-pill ${isPresent ? "status-present" : "status-absent"}`}>

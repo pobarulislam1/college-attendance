@@ -8,10 +8,17 @@ import ProtectedRoute from "@/lib/ProtectedRoute";
 import Header from "@/lib/Header";
 import PageTitle from "@/lib/PageTitle";
 
+const yearOptions = {
+  "ইন্টারমিডিয়েট": ["১ম বর্ষ", "২য় বর্ষ"],
+  "অনার্স": ["১ম বর্ষ", "২য় বর্ষ", "৩য় বর্ষ", "৪র্থ বর্ষ"],
+  "মাস্টার্স": ["১ম বর্ষ", "২য় বর্ষ"],
+};
+
 export default function Home() {
   const [name, setName] = useState("");
   const [roll, setRoll] = useState("");
   const [level, setLevel] = useState("ইন্টারমিডিয়েট");
+  const [year, setYear] = useState("১ম বর্ষ");
   const [department, setDepartment] = useState("");
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +35,11 @@ export default function Home() {
     loadStudents();
   }, []);
 
+  function handleLevelChange(newLevel) {
+    setLevel(newLevel);
+    setYear(yearOptions[newLevel][0]);
+  }
+
   async function handleAddStudent(e) {
     e.preventDefault();
     if (!name.trim() || !roll.trim()) {
@@ -38,6 +50,7 @@ export default function Home() {
       name: name.trim(),
       roll: roll.trim(),
       level,
+      year,
       department: department.trim() || "—",
       createdAt: serverTimestamp(),
     });
@@ -67,10 +80,19 @@ export default function Home() {
               value={roll}
               onChange={(e) => setRoll(e.target.value)}
             />
-            <select className="field-select" value={level} onChange={(e) => setLevel(e.target.value)}>
+            <select
+              className="field-select"
+              value={level}
+              onChange={(e) => handleLevelChange(e.target.value)}
+            >
               <option>ইন্টারমিডিয়েট</option>
               <option>অনার্স</option>
               <option>মাস্টার্স</option>
+            </select>
+            <select className="field-select" value={year} onChange={(e) => setYear(e.target.value)}>
+              {yearOptions[level].map((y) => (
+                <option key={y}>{y}</option>
+              ))}
             </select>
             <input
               className="field-input"
@@ -99,7 +121,7 @@ export default function Home() {
                       <div className="meta">
                         রোল: <b>{s.roll}</b>
                         <br />
-                        {s.level}
+                        {s.level} {s.year ? `· ${s.year}` : ""}
                         <br />
                         {s.department}
                       </div>

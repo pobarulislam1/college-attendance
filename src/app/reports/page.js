@@ -63,6 +63,7 @@ export default function ReportsPage() {
             "রোল": s.roll,
             "নাম": s.name,
             "স্তর": s.level,
+            "বর্ষ": s.year || "—",
             "বিভাগ/শ্রেণি": s.department,
             "উপস্থিত দিন": s.presentDays,
             "মোট দিন": totalDays,
@@ -127,7 +128,7 @@ export default function ReportsPage() {
                                         <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{s.roll}</td>
                                         <td>{s.name}</td>
                                         <td>
-                                            {s.level} · {s.department}
+                                            {s.level} {s.year ? `· ${s.year}` : ""} · {s.department}
                                         </td>
                                         <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                                             {s.presentDays}/{totalDays}
