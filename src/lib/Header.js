@@ -36,7 +36,8 @@ export default function Header({ title }) {
                     {title}
                 </h1>
                 <nav style={{ display: "flex", gap: 14, fontSize: 13.5, whiteSpace: "nowrap" }}>
-                    <Link href="/" style={{ color: "var(--indigo-dark)" }}>শিক্ষার্থী তালিকা</Link>
+                    <Link href="/" style={{ color: "var(--indigo-dark)" }}>নতুন শিক্ষার্থী</Link>
+                    <Link href="/students" style={{ color: "var(--indigo-dark)" }}>শিক্ষার্থী তালিকা</Link>
                     <Link href="/scan" style={{ color: "var(--indigo-dark)" }}>হাজিরা নিন</Link>
                     <Link href="/dashboard" style={{ color: "var(--indigo-dark)" }}>ড্যাশবোর্ড</Link>
                     <Link href="/reports" style={{ color: "var(--indigo-dark)" }}>রিপোর্ট</Link>

@@ -70,7 +70,7 @@ export default function StudentDetailPage() {
                 <main className="ledger-wrap">
                     <div className="card-box">
                         <p>এই শিক্ষার্থী খুঁজে পাওয়া যায়নি।</p>
-                        <button className="btn-ghost" onClick={() => router.push("/")}>
+                        <button className="btn-ghost" onClick={() => router.push("/students")}>
                             তালিকায় ফিরে যান
                         </button>
                     </div>
@@ -85,7 +85,7 @@ export default function StudentDetailPage() {
     return (
         <ProtectedRoute>
             <div className="no-print">
-                <Header title="শিক্ষার্থীর বিবরণ" />
+                <Header />
                 <PageTitle>শিক্ষার্থীর বিবরণ</PageTitle>
             </div>
 

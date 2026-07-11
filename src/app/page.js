@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, getDocs, serverTimestamp } from "firebase/firestore";
-import { QRCodeSVG } from "qrcode.react";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import ProtectedRoute from "@/lib/ProtectedRoute";
 import Header from "@/lib/Header";
 import PageTitle from "@/lib/PageTitle";
-import { useRouter } from "next/navigation";
-
 
 const yearOptions = {
   "ইন্টারমিডিয়েট": ["১ম বর্ষ", "২য় বর্ষ"],
@@ -23,21 +21,7 @@ export default function Home() {
   const [level, setLevel] = useState("ইন্টারমিডিয়েট");
   const [year, setYear] = useState("১ম বর্ষ");
   const [department, setDepartment] = useState("");
-  const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-
-  async function loadStudents() {
-    setLoading(true);
-    const snapshot = await getDocs(collection(db, "students"));
-    const list = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    setStudents(list);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    loadStudents();
-  }, []);
+  const [justAdded, setJustAdded] = useState(null);
 
   function handleLevelChange(newLevel) {
     setLevel(newLevel);
@@ -58,19 +42,38 @@ export default function Home() {
       department: department.trim() || "—",
       createdAt: serverTimestamp(),
     });
+    setJustAdded(name.trim());
     setName("");
     setRoll("");
     setDepartment("");
-    loadStudents();
   }
 
   return (
     <ProtectedRoute>
       <Header />
-      <PageTitle>শিক্ষার্থী তালিকা</PageTitle>
+      <PageTitle>নতুন শিক্ষার্থী যোগ করুন</PageTitle>
       <main className="ledger-wrap">
-        <div className="card-box">
-          <h2 style={{ fontSize: 17, marginTop: 0 }}>নতুন শিক্ষার্থী যোগ করুন</h2>
+        <div className="card-box" style={{ maxWidth: 480, margin: "0 auto" }}>
+          {justAdded && (
+            <p
+              style={{
+                background: "var(--success-bg)",
+                color: "var(--success)",
+                padding: "10px 14px",
+                borderRadius: 8,
+                fontSize: 14,
+                marginTop: 0,
+              }}
+            >
+              ✓ {justAdded} যোগ করা হয়েছে।{" "}
+              <span
+                style={{ textDecoration: "underline", cursor: "pointer" }}
+                onClick={() => router.push("/students")}
+              >
+                তালিকায় দেখুন
+              </span>
+            </p>
+          )}
           <form onSubmit={handleAddStudent} style={{ display: "grid", gap: 12 }}>
             <input
               className="field-input"
@@ -108,36 +111,6 @@ export default function Home() {
               শিক্ষার্থী যোগ করুন
             </button>
           </form>
-        </div>
-
-        <div className="card-box">
-          <h2 style={{ fontSize: 17, marginTop: 0 }}>মোট {students.length} জন শিক্ষার্থী</h2>
-          {loading ? (
-            <p style={{ color: "var(--ink-soft)" }}>লোড হচ্ছে...</p>
-          ) : (
-            <div className="id-card-grid">
-              {students.map((s) => (
-                <div key={s.id}
-                  className="id-card"
-                  onClick={() => router.push(`/student/${s.id}`)}
-                  style={{ cursor: "pointer" }}>
-                  <div className="id-body">
-                    <QRCodeSVG value={`ATTEND:${s.roll}`} size={70} />
-                    <div>
-                      <div className="name">{s.name}</div>
-                      <div className="meta">
-                        রোল: <b>{s.roll}</b>
-                        <br />
-                        {s.level} {s.year ? `· ${s.year}` : ""}
-                        <br />
-                        {s.department}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </main>
     </ProtectedRoute>
