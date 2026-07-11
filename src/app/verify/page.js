@@ -51,7 +51,7 @@ export default function VerifyPage() {
     return (
         <ProtectedRoute>
             <div className="no-print">
-                <Header title="হাজিরা যাচাই শিট" />
+                <Header />
                 <PageTitle>হাজিরা যাচাই শিট</PageTitle>
             </div>
 
