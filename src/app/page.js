@@ -7,6 +7,8 @@ import { QRCodeSVG } from "qrcode.react";
 import ProtectedRoute from "@/lib/ProtectedRoute";
 import Header from "@/lib/Header";
 import PageTitle from "@/lib/PageTitle";
+import { useRouter } from "next/navigation";
+
 
 const yearOptions = {
   "ইন্টারমিডিয়েট": ["১ম বর্ষ", "২য় বর্ষ"],
@@ -15,6 +17,7 @@ const yearOptions = {
 };
 
 export default function Home() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [roll, setRoll] = useState("");
   const [level, setLevel] = useState("ইন্টারমিডিয়েট");
@@ -22,6 +25,7 @@ export default function Home() {
   const [department, setDepartment] = useState("");
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+
 
   async function loadStudents() {
     setLoading(true);
@@ -113,7 +117,10 @@ export default function Home() {
           ) : (
             <div className="id-card-grid">
               {students.map((s) => (
-                <div key={s.id} className="id-card">
+                <div key={s.id}
+                  className="id-card"
+                  onClick={() => router.push(`/student/${s.id}`)}
+                  style={{ cursor: "pointer" }}>
                   <div className="id-body">
                     <QRCodeSVG value={`ATTEND:${s.roll}`} size={70} />
                     <div>
