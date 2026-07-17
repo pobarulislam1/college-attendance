@@ -54,7 +54,7 @@ export default function ScanPage() {
             oscillator.start(ctx.currentTime);
             oscillator.stop(ctx.currentTime + 0.25);
         } catch (err) {
-            // সাউন্ড না বাজলেও অ্যাপের কাজে কোনো প্রভাব পড়বে না
+            // The App Will Continue to Work Even If the Sound Fails to Play
         }
     }
 
@@ -94,7 +94,7 @@ export default function ScanPage() {
         const COOLDOWN_MS = 30 * 60 * 1000; // ৩০ মিনিট
 
         if (!existingSnap.exists()) {
-            // প্রথম স্ক্যান আজকের জন্য — CHECK-IN, কুলডাউনের প্রশ্নই নেই
+            // First Scan of the Day — CHECK-IN (No Cooldown Required)
             await setDoc(attRef, {
                 roll,
                 studentName: student.name,
@@ -120,7 +120,7 @@ export default function ScanPage() {
         const lastActionAtMs = existing.lastActionAtMs || 0;
         const elapsed = nowMs - lastActionAtMs;
 
-        // ৩০ মিনিট এখনো পার হয়নি
+        // The 30-Minute Cooldown Has Not Yet Expired
         if (elapsed < COOLDOWN_MS) {
             const remainingMin = Math.ceil((COOLDOWN_MS - elapsed) / 60000);
             playBeep("error");
@@ -129,7 +129,7 @@ export default function ScanPage() {
         }
 
         if (existing.status === "in") {
-            // কুলডাউন পার হয়েছে, এখন CHECK-OUT
+            // Cooldown Has Expired — Proceed with CHECK-OUT
             await updateDoc(attRef, {
                 checkOutTime: time,
                 checkOutPhoto: photoDataUrl || null,

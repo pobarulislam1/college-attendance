@@ -129,6 +129,17 @@ export default function StudentDetailPage() {
         router.push("/students");
     }
 
+    async function handleDeleteAttendanceRecord(record) {
+        const confirmed = window.confirm(
+            `${record.date} তারিখের হাজিরা রেকর্ডটি মুছে ফেলতে চান? এই কাজটি ফিরিয়ে নেওয়া যাবে না।`
+        );
+        if (!confirmed) return;
+
+        const docId = `${record.date}_${record.roll}`;
+        await deleteDoc(doc(db, "attendance", docId));
+        loadStudentData();
+    }
+
     function handlePrint() {
         window.print();
     }
@@ -273,24 +284,41 @@ export default function StudentDetailPage() {
                         {attendanceRecords.length === 0 ? (
                             <p style={{ color: "var(--ink-soft)" }}>এখনো কোনো হাজিরা রেকর্ড নেই।</p>
                         ) : (
-                            <table className="ledger-table">
-                                <thead>
-                                    <tr>
-                                        <th>তারিখ</th>
-                                        <th>প্রবেশ</th>
-                                        <th>বাহির</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {attendanceRecords.map((r, i) => (
-                                        <tr key={i}>
-                                            <td>{r.date}</td>
-                                            <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{r.checkInTime || r.time || "—"}</td>
-                                            <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{r.checkOutTime || "—"}</td>
+                                <table className="ledger-table">
+                                    <thead>
+                                        <tr>
+                                            <th>তারিখ</th>
+                                            <th>প্রবেশ</th>
+                                            <th>বাহির</th>
+                                            <th className="no-print"></th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {attendanceRecords.map((r, i) => (
+                                            <tr key={i}>
+                                                <td>{r.date}</td>
+                                                <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{r.checkInTime || r.time || "—"}</td>
+                                                <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{r.checkOutTime || "—"}</td>
+                                                <td className="no-print">
+                                                    <button
+                                                        onClick={() => handleDeleteAttendanceRecord(r)}
+                                                        style={{
+                                                            background: "none",
+                                                            border: "none",
+                                                            color: "var(--danger)",
+                                                            fontSize: 12,
+                                                            cursor: "pointer",
+                                                            textDecoration: "underline",
+                                                            padding: 0,
+                                                        }}
+                                                    >
+                                                        মুছুন
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                         )}
                     </div>
                 </div>
