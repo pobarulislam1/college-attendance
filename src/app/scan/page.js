@@ -29,6 +29,36 @@ export default function ScanPage() {
         return `${year}-${month}-${day}`;
     }
 
+    function playBeep(type) {
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            const ctx = new AudioContextClass();
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            if (type === "in") {
+                oscillator.frequency.value = 880; // উঁচু স্বর — check-in
+            } else if (type === "out") {
+                oscillator.frequency.value = 523; // মাঝারি স্বর — check-out
+            } else {
+                oscillator.frequency.value = 220; // নিচু স্বর — এরর/অজানা
+            }
+
+            oscillator.type = "sine";
+            gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+
+            oscillator.start(ctx.currentTime);
+            oscillator.stop(ctx.currentTime + 0.25);
+        } catch (err) {
+            // সাউন্ড না বাজলেও অ্যাপের কাজে কোনো প্রভাব পড়বে না
+        }
+    }
+
+
     function makeThumbnail(video) {
         const thumbCanvas = document.createElement("canvas");
         const targetWidth = 160;
@@ -48,9 +78,11 @@ export default function ScanPage() {
         const studentSnap = await getDocs(studentQuery);
 
         if (studentSnap.empty) {
+            playBeep("error");
             setMessage(`অজানা কোড — রোল ${roll} এর কোনো শিক্ষার্থী নেই`);
             return;
         }
+
         const student = studentSnap.docs[0].data();
         const dateKey = todayKey();
         const docId = `${dateKey}_${roll}`;
@@ -76,8 +108,10 @@ export default function ScanPage() {
                 createdAt: serverTimestamp(),
             });
 
+            playBeep("in");
             setMessage(`✓ ${student.name} — ক্লাসে প্রবেশ (Check-in) করা হয়েছে`);
             setLastStatus({ name: student.name, status: "in", time });
+
             setTodayLog((prev) => [{ roll, name: student.name, time, status: "in", photo: photoDataUrl }, ...prev]);
             return;
         }
@@ -89,6 +123,7 @@ export default function ScanPage() {
         // ৩০ মিনিট এখনো পার হয়নি
         if (elapsed < COOLDOWN_MS) {
             const remainingMin = Math.ceil((COOLDOWN_MS - elapsed) / 60000);
+            playBeep("error");
             setMessage(`${student.name} — একটু আগেই স্ক্যান হয়েছে। আরও ${remainingMin} মিনিট পর আবার চেষ্টা করুন।`);
             return;
         }
@@ -102,6 +137,7 @@ export default function ScanPage() {
                 lastActionAtMs: nowMs,
             });
 
+            playBeep("out");
             setMessage(`✓ ${student.name} — ক্লাস থেকে বের হলো (Check-out) — সময়: ${time}`);
             setLastStatus({ name: student.name, status: "out", time });
             setTodayLog((prev) => [{ roll, name: student.name, time, status: "out", photo: photoDataUrl }, ...prev]);

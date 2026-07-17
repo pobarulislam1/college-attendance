@@ -94,7 +94,7 @@ export default function StudentDetailPage() {
             return;
         }
 
-        // রোল বদলানো হলে, নতুন রোলটা অন্য কোনো শিক্ষার্থীর সাথে সংঘর্ষ করছে কিনা যাচাই করা
+        // When Changing a Roll Number, Check Whether the New Roll Number Conflicts with Another Student
         if (editRoll.trim() !== student.roll) {
             const studentsRef = collection(db, "students");
             const dupQuery = query(studentsRef, where("roll", "==", editRoll.trim()));
@@ -136,7 +136,7 @@ export default function StudentDetailPage() {
     if (loading) {
         return (
             <ProtectedRoute>
-                <Header title="শিক্ষার্থীর বিবরণ" />
+                <Header/>
                 <main className="ledger-wrap">
                     <p style={{ color: "var(--ink-soft)" }}>লোড হচ্ছে...</p>
                 </main>
@@ -166,7 +166,7 @@ export default function StudentDetailPage() {
     return (
         <ProtectedRoute>
             <div className="no-print">
-                <Header title="শিক্ষার্থীর বিবরণ" />
+                <Header/>
                 <PageTitle>শিক্ষার্থীর বিবরণ</PageTitle>
             </div>
 
