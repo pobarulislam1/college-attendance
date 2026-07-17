@@ -3,11 +3,17 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore"; import ProtectedRoute from "@/lib/ProtectedRoute";
+import { doc, getDoc, updateDoc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore";
+import ProtectedRoute from "@/lib/ProtectedRoute";
 import Header from "@/lib/Header";
 import PageTitle from "@/lib/PageTitle";
 import { QRCodeSVG } from "qrcode.react";
 
+const yearOptions = {
+    "ইন্টারমিডিয়েট": ["১ম বর্ষ", "২য় বর্ষ"],
+    "অনার্স": ["১ম বর্ষ", "২য় বর্ষ", "৩য় বর্ষ", "৪র্থ বর্ষ"],
+    "মাস্টার্স": ["১ম বর্ষ", "২য় বর্ষ"],
+};
 
 export default function StudentDetailPage() {
     const params = useParams();
@@ -17,6 +23,15 @@ export default function StudentDetailPage() {
     const [totalDays, setTotalDays] = useState(0);
     const [loading, setLoading] = useState(true);
 
+    const [isEditing, setIsEditing] = useState(false);
+    const [editName, setEditName] = useState("");
+    const [editRoll, setEditRoll] = useState("");
+    const [editLevel, setEditLevel] = useState("ইন্টারমিডিয়েট");
+    const [editYear, setEditYear] = useState("১ম বর্ষ");
+    const [editDept, setEditDept] = useState("");
+    const [saving, setSaving] = useState(false);
+    const [editError, setEditError] = useState("");
+
     useEffect(() => {
         loadStudentData();
     }, [params.id]);
@@ -24,7 +39,6 @@ export default function StudentDetailPage() {
     async function loadStudentData() {
         setLoading(true);
 
-        // Fetch Student Basic Information
         const studentDoc = await getDoc(doc(db, "students", params.id));
         if (!studentDoc.exists()) {
             setLoading(false);
@@ -32,20 +46,77 @@ export default function StudentDetailPage() {
         }
         const studentData = { id: studentDoc.id, ...studentDoc.data() };
         setStudent(studentData);
+        fillEditForm(studentData);
 
-        // Retrieve All Attendance Records for This Student
         const attendanceRef = collection(db, "attendance");
         const attQuery = query(attendanceRef, where("roll", "==", studentData.roll));
         const attSnap = await getDocs(attQuery);
         const records = attSnap.docs.map((d) => d.data()).sort((a, b) => b.date.localeCompare(a.date));
         setAttendanceRecords(records);
 
-        // Calculate the Total Number of Attendance Days (Across All Students)
         const allAttSnap = await getDocs(collection(db, "attendance"));
         const distinctDates = new Set(allAttSnap.docs.map((d) => d.data().date));
         setTotalDays(distinctDates.size);
 
         setLoading(false);
+    }
+
+    function fillEditForm(s) {
+        setEditName(s.name || "");
+        setEditRoll(s.roll || "");
+        setEditLevel(s.level || "ইন্টারমিডিয়েট");
+        setEditYear(s.year || yearOptions[s.level || "ইন্টারমিডিয়েট"][0]);
+        setEditDept(s.department === "—" ? "" : s.department || "");
+    }
+
+    function handleLevelChangeInEdit(newLevel) {
+        setEditLevel(newLevel);
+        setEditYear(yearOptions[newLevel][0]);
+    }
+
+    function startEditing() {
+        fillEditForm(student);
+        setEditError("");
+        setIsEditing(true);
+    }
+
+    function cancelEditing() {
+        setIsEditing(false);
+        setEditError("");
+    }
+
+    async function handleSaveEdit(e) {
+        e.preventDefault();
+        setEditError("");
+
+        if (!editName.trim() || !editRoll.trim()) {
+            setEditError("নাম এবং রোল নম্বর দুটোই দিন");
+            return;
+        }
+
+        // রোল বদলানো হলে, নতুন রোলটা অন্য কোনো শিক্ষার্থীর সাথে সংঘর্ষ করছে কিনা যাচাই করা
+        if (editRoll.trim() !== student.roll) {
+            const studentsRef = collection(db, "students");
+            const dupQuery = query(studentsRef, where("roll", "==", editRoll.trim()));
+            const dupSnap = await getDocs(dupQuery);
+            const conflict = dupSnap.docs.find((d) => d.id !== student.id);
+            if (conflict) {
+                setEditError("এই রোল নম্বর ইতিমধ্যে অন্য শিক্ষার্থীর জন্য ব্যবহৃত হয়েছে");
+                return;
+            }
+        }
+
+        setSaving(true);
+        await updateDoc(doc(db, "students", student.id), {
+            name: editName.trim(),
+            roll: editRoll.trim(),
+            level: editLevel,
+            year: editYear,
+            department: editDept.trim() || "—",
+        });
+        setSaving(false);
+        setIsEditing(false);
+        loadStudentData();
     }
 
     async function handleDelete() {
@@ -95,29 +166,86 @@ export default function StudentDetailPage() {
     return (
         <ProtectedRoute>
             <div className="no-print">
-                <Header />
+                <Header title="শিক্ষার্থীর বিবরণ" />
                 <PageTitle>শিক্ষার্থীর বিবরণ</PageTitle>
             </div>
 
             <main className="ledger-wrap">
                 <div id="print-area">
-                    {/* Print Header - Visible Only When Printing */}
                     <div className="print-only" style={{ display: "none", textAlign: "center", marginBottom: 20 }}>
                         <h1 style={{ fontSize: 20 }}>হাজিরার রিপোর্ট</h1>
                         <p style={{ fontSize: 12 }}>তৈরির তারিখ: {new Date().toLocaleDateString("bn-BD")}</p>
                     </div>
 
-                    <div className="card-box" style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "center" }}>
-                        <QRCodeSVG value={`ATTEND:${student.roll}`} size={90} />
-                        <div style={{ flex: 1, minWidth: 200 }}>
-                            <h2 style={{ fontSize: 22, margin: "0 0 8px 0" }}>{student.name}</h2>
-                            <p style={{ fontSize: 14, color: "var(--ink-soft)", margin: "2px 0" }}>রোল: {student.roll}</p>
-                            <p style={{ fontSize: 14, color: "var(--ink-soft)", margin: "2px 0" }}>
-                                {student.level} {student.year ? `· ${student.year}` : ""}
-                            </p>
-                            <p style={{ fontSize: 14, color: "var(--ink-soft)", margin: "2px 0" }}>বিভাগ: {student.department}</p>
+                    {!isEditing ? (
+                        <div className="card-box" style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "center" }}>
+                            <QRCodeSVG value={`ATTEND:${student.roll}`} size={90} />
+                            <div style={{ flex: 1, minWidth: 200 }}>
+                                <h2 style={{ fontSize: 22, margin: "0 0 8px 0" }}>{student.name}</h2>
+                                <p style={{ fontSize: 14, color: "var(--ink-soft)", margin: "2px 0" }}>রোল: {student.roll}</p>
+                                <p style={{ fontSize: 14, color: "var(--ink-soft)", margin: "2px 0" }}>
+                                    {student.level} {student.year ? `· ${student.year}` : ""}
+                                </p>
+                                <p style={{ fontSize: 14, color: "var(--ink-soft)", margin: "2px 0" }}>বিভাগ: {student.department}</p>
+                            </div>
+                            <button className="no-print btn-ghost" onClick={startEditing}>
+                                তথ্য সম্পাদনা করুন
+                            </button>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="card-box no-print">
+                            <h2 style={{ fontSize: 17, marginTop: 0 }}>তথ্য সম্পাদনা করুন</h2>
+                            <form onSubmit={handleSaveEdit} style={{ display: "grid", gap: 12, maxWidth: 420 }}>
+                                <input
+                                    className="field-input"
+                                    placeholder="নাম"
+                                    value={editName}
+                                    onChange={(e) => setEditName(e.target.value)}
+                                />
+                                <input
+                                    className="field-input"
+                                    placeholder="রোল নম্বর"
+                                    value={editRoll}
+                                    onChange={(e) => setEditRoll(e.target.value)}
+                                />
+                                <select
+                                    className="field-select"
+                                    value={editLevel}
+                                    onChange={(e) => handleLevelChangeInEdit(e.target.value)}
+                                >
+                                    <option>ইন্টারমিডিয়েট</option>
+                                    <option>অনার্স</option>
+                                    <option>মাস্টার্স</option>
+                                </select>
+                                <select className="field-select" value={editYear} onChange={(e) => setEditYear(e.target.value)}>
+                                    {yearOptions[editLevel].map((y) => (
+                                        <option key={y}>{y}</option>
+                                    ))}
+                                </select>
+                                <input
+                                    className="field-input"
+                                    placeholder="বিভাগ / শ্রেণি"
+                                    value={editDept}
+                                    onChange={(e) => setEditDept(e.target.value)}
+                                />
+
+                                {editError && (
+                                    <p style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "8px 12px", borderRadius: 8, fontSize: 13, margin: 0 }}>
+                                        {editError}
+                                    </p>
+                                )}
+
+                                <div style={{ display: "flex", gap: 10 }}>
+                                    <button type="submit" className="btn-primary" disabled={saving}>
+                                        {saving ? "সংরক্ষণ হচ্ছে..." : "সংরক্ষণ করুন"}
+                                    </button>
+                                    <button type="button" className="btn-ghost" onClick={cancelEditing}>
+                                        বাতিল করুন
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    )}
 
                     <div className="stat-row">
                         <div className="stat-box">
@@ -149,14 +277,16 @@ export default function StudentDetailPage() {
                                 <thead>
                                     <tr>
                                         <th>তারিখ</th>
-                                        <th>সময়</th>
+                                        <th>প্রবেশ</th>
+                                        <th>বাহির</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {attendanceRecords.map((r, i) => (
                                         <tr key={i}>
                                             <td>{r.date}</td>
-                                            <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{r.time}</td>
+                                            <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{r.checkInTime || r.time || "—"}</td>
+                                            <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{r.checkOutTime || "—"}</td>
                                         </tr>
                                     ))}
                                 </tbody>
