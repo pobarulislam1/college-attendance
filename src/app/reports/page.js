@@ -19,13 +19,18 @@ function todayKey() {
     return `${year}-${month}-${day}`;
 }
 
+function safe(value, fallback = "—") {
+    if (value === undefined || value === null || value === "") return fallback;
+    return value;
+}
+
 export default function ReportsPage() {
-    const [activeTab, setActiveTab] = useState("attendance"); // "attendance" | "verify"
+    const [activeTab, setActiveTab] = useState("attendance");
 
     return (
         <ProtectedRoute>
             <div className="no-print">
-                <Header />
+                <Header title="রিপোর্ট" />
                 <PageTitle>রিপোর্ট</PageTitle>
             </div>
 
@@ -106,18 +111,18 @@ function AttendanceReportTab() {
             .filter((s) => {
                 const q = search.trim().toLowerCase();
                 if (!q) return true;
-                return s.name.toLowerCase().includes(q) || s.roll.toLowerCase().includes(q);
+                return (s.name || "").toLowerCase().includes(q) || (s.roll || "").toLowerCase().includes(q);
             })
-            .sort((a, b) => a.roll.localeCompare(b.roll));
+            .sort((a, b) => (a.roll || "").localeCompare(b.roll || ""));
     }, [report, search, filterLevel, filterYear, filterDept]);
 
     function exportToExcel() {
         const rows = filtered.map((s) => ({
-            "রোল": s.roll,
-            "নাম": s.name,
-            "স্তর": s.level,
-            "বর্ষ": s.year || "—",
-            "বিভাগ/শ্রেণি": s.department,
+            "রোল": safe(s.roll),
+            "নাম": safe(s.name),
+            "স্তর": safe(s.level),
+            "বর্ষ": safe(s.year),
+            "বিভাগ/শ্রেণি": safe(s.department),
             "উপস্থিত দিন": s.presentDays,
             "মোট দিন": totalDays,
             "হাজিরার হার (%)": s.percent,
@@ -187,9 +192,9 @@ function AttendanceReportTab() {
                         <tbody>
                             {filtered.map((s) => (
                                 <tr key={s.id}>
-                                    <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{s.roll}</td>
-                                    <td>{s.name}</td>
-                                    <td>{s.level} {s.year ? `· ${s.year}` : ""} · {s.department}</td>
+                                    <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{safe(s.roll)}</td>
+                                    <td>{safe(s.name)}</td>
+                                    <td>{safe(s.level)} {s.year ? `· ${s.year}` : ""} · {safe(s.department)}</td>
                                     <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{s.presentDays}/{totalDays}</td>
                                     <td>
                                         <span className={`status-pill ${s.percent >= 75 ? "status-present" : "status-absent"}`}>
@@ -209,8 +214,7 @@ function AttendanceReportTab() {
     );
 }
 
-// ================= TAB 2: Verification Report (Date, Photo, Print) =================
-
+// ================= ট্যাব ২: যাচাই রিপোর্ট (তারিখ, ছবি, প্রিন্ট, check-in/out) =================
 function VerifyReportTab() {
     const [selectedDate, setSelectedDate] = useState(todayKey());
     const [records, setRecords] = useState([]);
@@ -272,7 +276,7 @@ function VerifyReportTab() {
         window.print();
     }
 
-    const withPhoto = filteredRecords.filter((r) => r.photo).length;
+    const withPhoto = filteredRecords.filter((r) => r.checkInPhoto || r.checkOutPhoto).length;
 
     return (
         <>
@@ -340,18 +344,29 @@ function VerifyReportTab() {
                         <div className="card-box verify-list">
                             {filteredRecords.map((r, i) => {
                                 const student = studentsMap[r.roll];
+                                const photo = r.checkInPhoto || r.checkOutPhoto;
                                 return (
                                     <div key={i} className="verify-row">
                                         <div className="verify-serial">{i + 1}</div>
                                         <div className="verify-info">
-                                            <div className="verify-name">{r.studentName}</div>
+                                            <div className="verify-name">{safe(r.studentName)}</div>
                                             <div className="verify-meta">
-                                                রোল: {r.roll} · সময়: {r.time}
-                                                {student ? ` · ${student.level} · ${student.year} · ${student.department}` : ""}
+                                                রোল: {safe(r.roll)} · প্রবেশ: {safe(r.checkInTime)} · বাহির: {r.checkOutTime ? r.checkOutTime : "চলমান"}
+                                                {student ? ` · ${safe(student.level)} · ${safe(student.year)} · ${safe(student.department)}` : ""}
                                             </div>
                                         </div>
-                                        {r.photo ? (
-                                            <img src={r.photo} alt={r.studentName} className="verify-photo" />
+                                        <span
+                                            className="status-pill"
+                                            style={{
+                                                background: r.status === "in" ? "var(--success-bg)" : "var(--danger-bg)",
+                                                color: r.status === "in" ? "var(--success)" : "var(--danger)",
+                                                flexShrink: 0,
+                                            }}
+                                        >
+                                            {r.status === "in" ? "ভিতরে" : "বের হয়েছে"}
+                                        </span>
+                                        {photo ? (
+                                            <img src={photo} alt={r.studentName} className="verify-photo" />
                                         ) : (
                                             <div className="verify-photo verify-no-photo">নেই</div>
                                         )}
@@ -401,7 +416,7 @@ function VerifyReportTab() {
           font-size: 14.5px;
         }
         .verify-meta {
-          font-size: 12.5px;
+          font-size: 12px;
           color: var(--ink-soft);
           font-family: "JetBrains Mono", monospace;
         }
