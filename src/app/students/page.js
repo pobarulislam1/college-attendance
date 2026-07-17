@@ -17,11 +17,40 @@ function todayKey() {
     return `${year}-${month}-${day}`;
 }
 
+const levelOptions = ["সব", "ইন্টারমিডিয়েট", "অনার্স", "মাস্টার্স"];
+const yearOptions = ["সব", "১ম বর্ষ", "২য় বর্ষ", "৩য় বর্ষ", "৪র্থ বর্ষ"];
+const subjectList = [
+    "সব",
+    "বাংলা",
+    "ইংরেজি",
+    "অর্থনীতি",
+    "রাষ্ট্রবিজ্ঞান",
+    "ইতিহাস",
+    "দর্শন",
+    "সমাজবিজ্ঞান",
+    "ব্যবস্থাপনা",
+    "হিসাববিজ্ঞান",
+    "মার্কেটিং",
+    "ফিন্যান্স",
+    "পদার্থবিজ্ঞান",
+    "রসায়ন",
+    "গণিত",
+    "উদ্ভিদবিজ্ঞান",
+    "প্রাণিবিজ্ঞান",
+    "মনোবিজ্ঞান",
+    "ভূগোল",
+    "প্রযোজ্য না",
+    "অন্যান্য",
+];
+
 export default function StudentsPage() {
     const router = useRouter();
     const [students, setStudents] = useState([]);
     const [statusMap, setStatusMap] = useState({});
     const [search, setSearch] = useState("");
+    const [filterLevel, setFilterLevel] = useState("সব");
+    const [filterYear, setFilterYear] = useState("সব");
+    const [filterSubject, setFilterSubject] = useState("সব");
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -47,11 +76,15 @@ export default function StudentsPage() {
         setLoading(false);
     }
 
-    const filteredStudents = students.filter((s) => {
-        const q = search.trim().toLowerCase();
-        if (!q) return true;
-        return s.name.toLowerCase().includes(q) || s.roll.toLowerCase().includes(q);
-    });
+    const filteredStudents = students
+        .filter((s) => filterLevel === "সব" || s.level === filterLevel)
+        .filter((s) => filterYear === "সব" || s.year === filterYear)
+        .filter((s) => filterSubject === "সব" || s.subject === filterSubject)
+        .filter((s) => {
+            const q = search.trim().toLowerCase();
+            if (!q) return true;
+            return s.name.toLowerCase().includes(q) || s.roll.toLowerCase().includes(q);
+        });
 
     function statusLabel(roll) {
         const status = statusMap[roll];
@@ -65,7 +98,28 @@ export default function StudentsPage() {
             <Header/>
             <PageTitle>শিক্ষার্থী তালিকা</PageTitle>
             <main className="ledger-wrap">
-                <div className="card-box">
+                <div className="card-box" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>স্তর:</label>
+                            <select className="field-select" value={filterLevel} onChange={(e) => setFilterLevel(e.target.value)} style={{ width: "auto" }}>
+                                {levelOptions.map((l) => <option key={l}>{l}</option>)}
+                            </select>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>বর্ষ:</label>
+                            <select className="field-select" value={filterYear} onChange={(e) => setFilterYear(e.target.value)} style={{ width: "auto" }}>
+                                {yearOptions.map((y) => <option key={y}>{y}</option>)}
+                            </select>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>বিষয়:</label>
+                            <select className="field-select" value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)} style={{ width: "auto" }}>
+                                {subjectList.map((s) => <option key={s}>{s}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
                     <div
                         style={{
                             display: "flex",
@@ -73,7 +127,6 @@ export default function StudentsPage() {
                             alignItems: "center",
                             flexWrap: "wrap",
                             gap: 12,
-                            marginBottom: 14,
                         }}
                     >
                         <h2 style={{ fontSize: 17, margin: 0 }}>মোট {filteredStudents.length} জন শিক্ষার্থী</h2>
@@ -138,6 +191,7 @@ export default function StudentsPage() {
                                                     {s.level} {s.year ? `· ${s.year}` : ""}
                                                     <br />
                                                     {s.department}
+                                                    {s.subject && s.subject !== "—" && s.subject !== "প্রযোজ্য না" ? ` · ${s.subject}` : ""}
                                                 </div>
                                             </div>
                                         </div>
