@@ -7,11 +7,17 @@ import ProtectedRoute from "@/lib/ProtectedRoute";
 import Header from "@/lib/Header";
 import PageTitle from "@/lib/PageTitle";
 
+const levelOptions = ["সব", "ইন্টারমিডিয়েট", "অনার্স", "মাস্টার্স"];
+const yearOptions = ["সব", "১ম বর্ষ", "২য় বর্ষ", "৩য় বর্ষ", "৪র্থ বর্ষ"];
+
 export default function DashboardPage() {
     const [students, setStudents] = useState([]);
     const [attendance, setAttendance] = useState([]);
     const [selectedDate, setSelectedDate] = useState(todayKey());
     const [search, setSearch] = useState("");
+    const [filterLevel, setFilterLevel] = useState("সব");
+    const [filterYear, setFilterYear] = useState("সব");
+    const [filterDept, setFilterDept] = useState("সব");
     const [loading, setLoading] = useState(true);
 
     function todayKey() {
@@ -42,14 +48,14 @@ export default function DashboardPage() {
         loadData();
     }, [loadData]);
 
-    const presentRolls = new Set(attendance.map((a) => a.roll));
-    const totalCount = students.length;
-    const presentCount = students.filter((s) => presentRolls.has(s.roll)).length;
-    const absentCount = totalCount - presentCount;
-    const percent = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
+    // Dynamically Generated from Department/Class Data
+    const deptOptions = ["সব", ...Array.from(new Set(students.map((s) => s.department).filter((d) => d && d !== "—"))).sort()];
 
+ // First, Filter the Student List by Level, Year, Department, and Search
     const filteredStudents = students
-        .slice()
+        .filter((s) => filterLevel === "সব" || s.level === filterLevel)
+        .filter((s) => filterYear === "সব" || s.year === filterYear)
+        .filter((s) => filterDept === "সব" || s.department === filterDept)
         .filter((s) => {
             const q = search.trim().toLowerCase();
             if (!q) return true;
@@ -57,30 +63,60 @@ export default function DashboardPage() {
         })
         .sort((a, b) => a.roll.localeCompare(b.roll));
 
+    // Identify Present Students from the Filtered List (All Summary Counts Above Are Based on This Filtered List) 
+    const presentRolls = new Set(attendance.map((a) => a.roll));
+    const totalCount = filteredStudents.length;
+    const presentCount = filteredStudents.filter((s) => presentRolls.has(s.roll)).length;
+    const absentCount = totalCount - presentCount;
+    const percent = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
+
     return (
         <ProtectedRoute>
-            <Header />
+            <Header/>
             <PageTitle>হাজিরার ড্যাশবোর্ড</PageTitle>
             <main className="ledger-wrap">
-                <div className="card-box" style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                    <label style={{ fontWeight: 600, fontSize: 14 }}>তারিখ:</label>
-                    <input
-                        type="date"
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        className="field-input"
-                        style={{ width: "auto" }}
-                    />
-                    <button onClick={loadData} className="btn-ghost">
-                        রিফ্রেশ করুন
-                    </button>
-                    <input
-                        className="field-input"
-                        placeholder="নাম বা রোল দিয়ে খুঁজুন..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        style={{ flex: 1, minWidth: 180 }}
-                    />
+                <div className="card-box" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>স্তর:</label>
+                            <select className="field-select" value={filterLevel} onChange={(e) => setFilterLevel(e.target.value)} style={{ width: "auto" }}>
+                                {levelOptions.map((l) => <option key={l}>{l}</option>)}
+                            </select>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>বর্ষ:</label>
+                            <select className="field-select" value={filterYear} onChange={(e) => setFilterYear(e.target.value)} style={{ width: "auto" }}>
+                                {yearOptions.map((y) => <option key={y}>{y}</option>)}
+                            </select>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>বিভাগ/শ্রেণি:</label>
+                            <select className="field-select" value={filterDept} onChange={(e) => setFilterDept(e.target.value)} style={{ width: "auto" }}>
+                                {deptOptions.map((d) => <option key={d}>{d}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                        <label style={{ fontWeight: 600, fontSize: 14 }}>তারিখ:</label>
+                        <input
+                            type="date"
+                            value={selectedDate}
+                            onChange={(e) => setSelectedDate(e.target.value)}
+                            className="field-input"
+                            style={{ width: "auto" }}
+                        />
+                        <button onClick={loadData} className="btn-ghost">
+                            রিফ্রেশ করুন
+                        </button>
+                        <input
+                            className="field-input"
+                            placeholder="নাম বা রোল দিয়ে খুঁজুন..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            style={{ flex: 1, minWidth: 180 }}
+                        />
+                    </div>
                 </div>
 
                 {loading ? (
@@ -100,7 +136,7 @@ export default function DashboardPage() {
                                     <tr>
                                         <th>রোল</th>
                                         <th>নাম</th>
-                                        <th>স্তর / বিভাগ</th>
+                                        <th>স্তর / বর্ষ / বিভাগ</th>
                                         <th>অবস্থা</th>
                                     </tr>
                                 </thead>
@@ -127,7 +163,7 @@ export default function DashboardPage() {
 
                             {filteredStudents.length === 0 && (
                                 <p style={{ color: "var(--ink-soft)", marginTop: 12 }}>
-                                    কোনো শিক্ষার্থী পাওয়া যায়নি।
+                                    এই ফিল্টার অনুযায়ী কোনো শিক্ষার্থী পাওয়া যায়নি।
                                 </p>
                             )}
                         </div>
