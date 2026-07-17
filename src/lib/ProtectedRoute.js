@@ -19,7 +19,7 @@ export default function ProtectedRoute({ children }) {
     }
 
     if (!user) {
-        return null; // লগইন পেজে পাঠানো হচ্ছে
+        return null; // Redirecting to the Login Page
     }
 
     return children;

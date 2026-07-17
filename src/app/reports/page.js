@@ -209,7 +209,8 @@ function AttendanceReportTab() {
     );
 }
 
-// ================= ট্যাব ২: যাচাই রিপোর্ট (তারিখ, ছবি, প্রিন্ট) =================
+// ================= TAB 2: Verification Report (Date, Photo, Print) =================
+
 function VerifyReportTab() {
     const [selectedDate, setSelectedDate] = useState(todayKey());
     const [records, setRecords] = useState([]);

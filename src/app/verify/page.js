@@ -8,6 +8,20 @@ import Header from "@/lib/Header";
 import PageTitle from "@/lib/PageTitle";
 
 export default function VerifyPage() {
+    const yearOptions = [
+        "১ম বর্ষ",
+        "২য় বর্ষ",
+        "৩য় বর্ষ",
+        "৪র্থ বর্ষ",
+    ];
+
+    const subjectList = [
+        "বাংলা",
+        "ইংরেজি",
+        "অর্থনীতি",
+        "ইতিহাস",
+        "অন্যান্য",
+    ];
     const [selectedDate, setSelectedDate] = useState(todayKey());
     const [records, setRecords] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -27,7 +41,7 @@ export default function VerifyPage() {
         const snap = await getDocs(q);
         const list = snap.docs.map((d) => d.data());
 
-        // যে আগে হাজিরা দিয়েছে সে আগে থাকবে (createdAt অনুযায়ী ক্রমানুসারে)
+        // Sort by Attendance Time (Earliest First, Based on createdAt)
         list.sort((a, b) => {
             const aTime = a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0;
             const bTime = b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0;

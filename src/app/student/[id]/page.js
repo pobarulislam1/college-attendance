@@ -3,11 +3,11 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
-import ProtectedRoute from "@/lib/ProtectedRoute";
+import { doc, getDoc, deleteDoc, collection, query, where, getDocs } from "firebase/firestore"; import ProtectedRoute from "@/lib/ProtectedRoute";
 import Header from "@/lib/Header";
 import PageTitle from "@/lib/PageTitle";
 import { QRCodeSVG } from "qrcode.react";
+
 
 export default function StudentDetailPage() {
     const params = useParams();
@@ -24,7 +24,7 @@ export default function StudentDetailPage() {
     async function loadStudentData() {
         setLoading(true);
 
-        // শিক্ষার্থীর মূল তথ্য আনা
+        // Fetch Student Basic Information
         const studentDoc = await getDoc(doc(db, "students", params.id));
         if (!studentDoc.exists()) {
             setLoading(false);
@@ -33,19 +33,29 @@ export default function StudentDetailPage() {
         const studentData = { id: studentDoc.id, ...studentDoc.data() };
         setStudent(studentData);
 
-        // এই শিক্ষার্থীর সব হাজিরার রেকর্ড আনা
+        // Retrieve All Attendance Records for This Student
         const attendanceRef = collection(db, "attendance");
         const attQuery = query(attendanceRef, where("roll", "==", studentData.roll));
         const attSnap = await getDocs(attQuery);
         const records = attSnap.docs.map((d) => d.data()).sort((a, b) => b.date.localeCompare(a.date));
         setAttendanceRecords(records);
 
-        // মোট কতদিন হাজিরা নেওয়া হয়েছে (সব শিক্ষার্থী মিলিয়ে) বের করা
+        // Calculate the Total Number of Attendance Days (Across All Students)
         const allAttSnap = await getDocs(collection(db, "attendance"));
         const distinctDates = new Set(allAttSnap.docs.map((d) => d.data().date));
         setTotalDays(distinctDates.size);
 
         setLoading(false);
+    }
+
+    async function handleDelete() {
+        const confirmed = window.confirm(
+            `আপনি কি নিশ্চিত ${student.name} (রোল: ${student.roll}) কে মুছে ফেলতে চান? এই কাজটি ফিরিয়ে নেওয়া যাবে না।`
+        );
+        if (!confirmed) return;
+
+        await deleteDoc(doc(db, "students", student.id));
+        router.push("/students");
     }
 
     function handlePrint() {
@@ -91,7 +101,7 @@ export default function StudentDetailPage() {
 
             <main className="ledger-wrap">
                 <div id="print-area">
-                    {/* প্রিন্ট হেডার - শুধু প্রিন্ট করলে দেখাবে */}
+                    {/* Print Header - Visible Only When Printing */}
                     <div className="print-only" style={{ display: "none", textAlign: "center", marginBottom: 20 }}>
                         <h1 style={{ fontSize: 20 }}>হাজিরার রিপোর্ট</h1>
                         <p style={{ fontSize: 12 }}>তৈরির তারিখ: {new Date().toLocaleDateString("bn-BD")}</p>
@@ -155,12 +165,28 @@ export default function StudentDetailPage() {
                     </div>
                 </div>
 
-                <div className="no-print" style={{ display: "flex", gap: 10, marginTop: 4 }}>
+                <div className="no-print" style={{ display: "flex", gap: 10, marginTop: 4, flexWrap: "wrap" }}>
                     <button className="btn-primary" onClick={handlePrint}>
                         রিপোর্ট প্রিন্ট করুন
                     </button>
-                    <button className="btn-ghost" onClick={() => router.push("/")}>
+                    <button className="btn-ghost" onClick={() => router.push("/students")}>
                         তালিকায় ফিরে যান
+                    </button>
+                    <button
+                        onClick={handleDelete}
+                        style={{
+                            padding: "9px 16px",
+                            background: "var(--danger-bg)",
+                            color: "var(--danger)",
+                            border: "none",
+                            borderRadius: 10,
+                            fontSize: 13,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            marginLeft: "auto",
+                        }}
+                    >
+                        শিক্ষার্থী মুছে ফেলুন
                     </button>
                 </div>
             </main>
