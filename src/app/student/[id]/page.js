@@ -95,15 +95,20 @@ export default function StudentDetailPage() {
         }
 
         // When Changing a Roll Number, Check Whether the New Roll Number Conflicts with Another Student
-        if (editRoll.trim() !== student.roll) {
-            const studentsRef = collection(db, "students");
-            const dupQuery = query(studentsRef, where("roll", "==", editRoll.trim()));
-            const dupSnap = await getDocs(dupQuery);
-            const conflict = dupSnap.docs.find((d) => d.id !== student.id);
-            if (conflict) {
-                setEditError("এই রোল নম্বর ইতিমধ্যে অন্য শিক্ষার্থীর জন্য ব্যবহৃত হয়েছে");
-                return;
-            }
+        const editGroupKey = isIntermediateEdit ? editGroup : (editSubject === "Other" ? (editCustomSubject.trim() || "Other") : editSubject);
+
+        const studentsRef = collection(db, "students");
+        const dupQuery = query(studentsRef, where("roll", "==", editRoll.trim()));
+        const dupSnap = await getDocs(dupQuery);
+        const conflict = dupSnap.docs.find((d) => {
+            if (d.id === student.id) return false; // নিজের রেকর্ড বাদ দিয়ে
+            const data = d.data();
+            const dataGroupKey = data.level === "ইন্টারমিডিয়েট" ? data.department : data.subject;
+            return data.level === editLevel && data.year === editYear && dataGroupKey === editGroupKey;
+        });
+        if (conflict) {
+            setEditError("এই স্তর, বর্ষ ও বিভাগ/বিষয়ে এই রোল নম্বর ইতিমধ্যে ব্যবহৃত হয়েছে");
+            return;
         }
 
         setSaving(true);

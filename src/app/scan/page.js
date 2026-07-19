@@ -40,11 +40,11 @@ export default function ScanPage() {
             gainNode.connect(ctx.destination);
 
             if (type === "in") {
-                oscillator.frequency.value = 880; // উঁচু স্বর — check-in
+                oscillator.frequency.value = 880; // High Voice — Check-in
             } else if (type === "out") {
-                oscillator.frequency.value = 523; // মাঝারি স্বর — check-out
+                oscillator.frequency.value = 523; // Medium Voice — Check-out
             } else {
-                oscillator.frequency.value = 220; // নিচু স্বর — এরর/অজানা
+                oscillator.frequency.value = 220; // Low Voice — Error / Unknown
             }
 
             oscillator.type = "sine";
@@ -91,7 +91,7 @@ export default function ScanPage() {
 
         const time = new Date().toLocaleTimeString("bn-BD", { hour: "2-digit", minute: "2-digit" });
         const nowMs = Date.now();
-        const COOLDOWN_MS = 30 * 60 * 1000; // ৩০ মিনিট
+        const COOLDOWN_MS = 30 * 60 * 1000; // 30 Minutes
 
         if (!existingSnap.exists()) {
             // First Scan of the Day — CHECK-IN (No Cooldown Required)

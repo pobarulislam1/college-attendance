@@ -30,7 +30,7 @@ export default function ReportsPage() {
     return (
         <ProtectedRoute>
             <div className="no-print">
-                <Header title="রিপোর্ট" />
+                <Header/>
                 <PageTitle>রিপোর্ট</PageTitle>
             </div>
 
