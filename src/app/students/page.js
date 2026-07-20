@@ -80,7 +80,7 @@ export default function StudentsPage() {
     const isHonoursOrMastersFilter = filterLevel === "অনার্স" || filterLevel === "মাস্টার্স";
     const currentYearOptions = yearsByLevel[filterLevel] || ["সব"];
 
-    // অনার্স/মাস্টার্সের জন্য বিষয়ের তালিকা প্রকৃত ডেটা থেকে গতিশীলভাবে তৈরি
+    // Dynamically generate the subject list for Honors/Master's from actual data
     const subjectOptions = useMemo(() => {
         const seen = new Map();
         students.forEach((s) => {
@@ -121,7 +121,7 @@ export default function StudentsPage() {
 
     return (
         <ProtectedRoute>
-            <Header title="শিক্ষার্থী তালিকা" />
+            <Header/>
             <PageTitle>শিক্ষার্থী তালিকা</PageTitle>
             <main className="ledger-wrap">
                 <div className="card-box" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -150,7 +150,7 @@ export default function StudentsPage() {
                             </select>
                         </div>
 
-                        {/* ইন্টারমিডিয়েট বাছা থাকলে বিভাগ ফিল্টার দেখাবে */}
+                        {/* Show department filter only when Intermediate is selected */}
                         {isIntermediateFilter && (
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                 <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>বিভাগ:</label>
@@ -165,7 +165,7 @@ export default function StudentsPage() {
                             </div>
                         )}
 
-                        {/* অনার্স/মাস্টার্স (বা "সব") বাছা থাকলে বিষয় ফিল্টার দেখাবে */}
+                        {/* Show subject filter when Honors, Master's, or "All" is selected */}
                         {!isIntermediateFilter && (
                             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                                 <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>বিষয়:</label>

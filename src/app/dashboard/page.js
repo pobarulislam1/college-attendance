@@ -48,22 +48,34 @@ export default function DashboardPage() {
         loadData();
     }, [loadData]);
 
-    // Dynamically Generated from Department/Class Data
-    const deptOptions = ["সব", ...Array.from(new Set(students.map((s) => s.department).filter((d) => d && d !== "—"))).sort()];
 
- // First, Filter the Student List by Level, Year, Department, and Search
+    // Generate filter options for both departments and subjects (departments for Intermediate, subjects for Honors/Master's)
+    const deptOptions = [
+        "সব",
+        ...Array.from(
+            new Set(
+                students
+                    .map((s) => (s.level === "ইন্টারমিডিয়েট" ? s.department : s.subject))
+                    .filter((d) => d && d !== "—")
+            )
+        ).sort(),
+    ];
+
     const filteredStudents = students
         .filter((s) => filterLevel === "সব" || s.level === filterLevel)
         .filter((s) => filterYear === "সব" || s.year === filterYear)
-        .filter((s) => filterDept === "সব" || s.department === filterDept)
+        .filter((s) => {
+            if (filterDept === "সব") return true;
+            const relevantField = s.level === "ইন্টারমিডিয়েট" ? s.department : s.subject;
+            return relevantField === filterDept;
+        })
         .filter((s) => {
             const q = search.trim().toLowerCase();
             if (!q) return true;
-            return s.name.toLowerCase().includes(q) || s.roll.toLowerCase().includes(q);
+            return (s.name || "").toLowerCase().includes(q) || (s.roll || "").toLowerCase().includes(q);
         })
-        .sort((a, b) => a.roll.localeCompare(b.roll));
+        .sort((a, b) => (a.roll || "").localeCompare(b.roll || ""));
 
-    // Identify Present Students from the Filtered List (All Summary Counts Above Are Based on This Filtered List) 
     const presentRolls = new Set(attendance.map((a) => a.roll));
     const totalCount = filteredStudents.length;
     const presentCount = filteredStudents.filter((s) => presentRolls.has(s.roll)).length;
@@ -90,7 +102,7 @@ export default function DashboardPage() {
                             </select>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>বিভাগ/শ্রেণি:</label>
+                            <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>বিভাগ/বিষয়:</label>
                             <select className="field-select" value={filterDept} onChange={(e) => setFilterDept(e.target.value)} style={{ width: "auto" }}>
                                 {deptOptions.map((d) => <option key={d}>{d}</option>)}
                             </select>
@@ -136,19 +148,23 @@ export default function DashboardPage() {
                                     <tr>
                                         <th>রোল</th>
                                         <th>নাম</th>
-                                        <th>স্তর / বর্ষ / বিভাগ</th>
+                                        <th>স্তর / বর্ষ / বিভাগ-বিষয়</th>
                                         <th>অবস্থা</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {filteredStudents.map((s) => {
                                         const isPresent = presentRolls.has(s.roll);
+                                        const groupOrSubject =
+                                            s.level === "ইন্টারমিডিয়েট"
+                                                ? (s.department && s.department !== "—" ? s.department : "—")
+                                                : (s.subject && s.subject !== "—" ? s.subject : "—");
                                         return (
                                             <tr key={s.id}>
                                                 <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{s.roll}</td>
                                                 <td>{s.name}</td>
                                                 <td>
-                                                    {s.level} {s.year ? `· ${s.year}` : ""} · {s.department}
+                                                    {s.level} {s.year ? `· ${s.year}` : ""} · {groupOrSubject}
                                                 </td>
                                                 <td>
                                                     <span className={`status-pill ${isPresent ? "status-present" : "status-absent"}`}>
