@@ -15,6 +15,30 @@ const yearOptions = {
     "মাস্টার্স": ["১ম বর্ষ", "২য় বর্ষ"],
 };
 
+const groupOptions = ["Science", "Arts", "Commerce"];
+
+const subjectList = [
+    "Bangla",
+    "English",
+    "Economics",
+    "Political Science",
+    "History",
+    "Philosophy",
+    "Sociology",
+    "Management",
+    "Accounting",
+    "Marketing",
+    "Finance",
+    "Physics",
+    "Chemistry",
+    "Mathematics",
+    "Botany",
+    "Zoology",
+    "Psychology",
+    "Geography",
+    "Other",
+];
+
 export default function StudentDetailPage() {
     const params = useParams();
     const router = useRouter();
@@ -28,9 +52,13 @@ export default function StudentDetailPage() {
     const [editRoll, setEditRoll] = useState("");
     const [editLevel, setEditLevel] = useState("ইন্টারমিডিয়েট");
     const [editYear, setEditYear] = useState("১ম বর্ষ");
-    const [editDept, setEditDept] = useState("");
+    const [editGroup, setEditGroup] = useState("Science");
+    const [editSubject, setEditSubject] = useState("Bangla");
+    const [editCustomSubject, setEditCustomSubject] = useState("");
     const [saving, setSaving] = useState(false);
     const [editError, setEditError] = useState("");
+
+    const isIntermediateEdit = editLevel === "ইন্টারমিডিয়েট";
 
     useEffect(() => {
         loadStudentData();
@@ -66,7 +94,18 @@ export default function StudentDetailPage() {
         setEditRoll(s.roll || "");
         setEditLevel(s.level || "ইন্টারমিডিয়েট");
         setEditYear(s.year || yearOptions[s.level || "ইন্টারমিডিয়েট"][0]);
-        setEditDept(s.department === "—" ? "" : s.department || "");
+
+        const dept = s.department && s.department !== "—" ? s.department : "Science";
+        setEditGroup(groupOptions.includes(dept) ? dept : "Science");
+
+        const subj = s.subject && s.subject !== "—" ? s.subject : "Bangla";
+        if (subjectList.includes(subj)) {
+            setEditSubject(subj);
+            setEditCustomSubject("");
+        } else {
+            setEditSubject("Other");
+            setEditCustomSubject(subj);
+        }
     }
 
     function handleLevelChangeInEdit(newLevel) {
@@ -94,21 +133,24 @@ export default function StudentDetailPage() {
             return;
         }
 
-        // When Changing a Roll Number, Check Whether the New Roll Number Conflicts with Another Student
-        const editGroupKey = isIntermediateEdit ? editGroup : (editSubject === "Other" ? (editCustomSubject.trim() || "Other") : editSubject);
+        const editGroupKey = isIntermediateEdit
+            ? editGroup
+            : (editSubject === "Other" ? (editCustomSubject.trim() || "Other") : editSubject);
 
-        const studentsRef = collection(db, "students");
-        const dupQuery = query(studentsRef, where("roll", "==", editRoll.trim()));
-        const dupSnap = await getDocs(dupQuery);
-        const conflict = dupSnap.docs.find((d) => {
-            if (d.id === student.id) return false; // নিজের রেকর্ড বাদ দিয়ে
-            const data = d.data();
-            const dataGroupKey = data.level === "ইন্টারমিডিয়েট" ? data.department : data.subject;
-            return data.level === editLevel && data.year === editYear && dataGroupKey === editGroupKey;
-        });
-        if (conflict) {
-            setEditError("এই স্তর, বর্ষ ও বিভাগ/বিষয়ে এই রোল নম্বর ইতিমধ্যে ব্যবহৃত হয়েছে");
-            return;
+        if (editRoll.trim() !== student.roll || editLevel !== student.level || editYear !== student.year) {
+            const studentsRef = collection(db, "students");
+            const dupQuery = query(studentsRef, where("roll", "==", editRoll.trim()));
+            const dupSnap = await getDocs(dupQuery);
+            const conflict = dupSnap.docs.find((d) => {
+                if (d.id === student.id) return false;
+                const data = d.data();
+                const dataGroupKey = data.level === "ইন্টারমিডিয়েট" ? data.department : data.subject;
+                return data.level === editLevel && data.year === editYear && dataGroupKey === editGroupKey;
+            });
+            if (conflict) {
+                setEditError("এই স্তর, বর্ষ ও বিভাগ/বিষয়ে এই রোল নম্বর ইতিমধ্যে ব্যবহৃত হয়েছে");
+                return;
+            }
         }
 
         setSaving(true);
@@ -117,7 +159,8 @@ export default function StudentDetailPage() {
             roll: editRoll.trim(),
             level: editLevel,
             year: editYear,
-            department: editDept.trim() || "—",
+            department: isIntermediateEdit ? editGroup : "—",
+            subject: isIntermediateEdit ? "—" : editGroupKey,
         });
         setSaving(false);
         setIsEditing(false);
@@ -152,7 +195,7 @@ export default function StudentDetailPage() {
     if (loading) {
         return (
             <ProtectedRoute>
-                <Header/>
+                <Header />
                 <main className="ledger-wrap">
                     <p style={{ color: "var(--ink-soft)" }}>লোড হচ্ছে...</p>
                 </main>
@@ -178,11 +221,12 @@ export default function StudentDetailPage() {
 
     const presentDays = attendanceRecords.length;
     const percent = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0;
+    const studentIsIntermediate = student.level === "ইন্টারমিডিয়েট";
 
     return (
         <ProtectedRoute>
             <div className="no-print">
-                <Header/>
+                <Header title="শিক্ষার্থীর বিবরণ" />
                 <PageTitle>শিক্ষার্থীর বিবরণ</PageTitle>
             </div>
 
@@ -202,7 +246,15 @@ export default function StudentDetailPage() {
                                 <p style={{ fontSize: 14, color: "var(--ink-soft)", margin: "2px 0" }}>
                                     {student.level} {student.year ? `· ${student.year}` : ""}
                                 </p>
-                                <p style={{ fontSize: 14, color: "var(--ink-soft)", margin: "2px 0" }}>বিভাগ: {student.department}</p>
+                                {studentIsIntermediate ? (
+                                    <p style={{ fontSize: 14, color: "var(--ink-soft)", margin: "2px 0" }}>
+                                        বিভাগ: {student.department && student.department !== "—" ? student.department : "—"}
+                                    </p>
+                                ) : (
+                                    <p style={{ fontSize: 14, color: "var(--ink-soft)", margin: "2px 0" }}>
+                                        বিষয়: {student.subject && student.subject !== "—" ? student.subject : "—"}
+                                    </p>
+                                )}
                             </div>
                             <button className="no-print btn-ghost" onClick={startEditing}>
                                 তথ্য সম্পাদনা করুন
@@ -238,12 +290,39 @@ export default function StudentDetailPage() {
                                         <option key={y}>{y}</option>
                                     ))}
                                 </select>
-                                <input
-                                    className="field-input"
-                                    placeholder="বিভাগ / শ্রেণি"
-                                    value={editDept}
-                                    onChange={(e) => setEditDept(e.target.value)}
-                                />
+
+                                {isIntermediateEdit ? (
+                                    <div>
+                                        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", display: "block", marginBottom: 6 }}>
+                                            বিভাগ
+                                        </label>
+                                        <select className="field-select" value={editGroup} onChange={(e) => setEditGroup(e.target.value)}>
+                                            {groupOptions.map((g) => (
+                                                <option key={g}>{g}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", display: "block", marginBottom: 6 }}>
+                                            বিষয় (Subject)
+                                        </label>
+                                        <select className="field-select" value={editSubject} onChange={(e) => setEditSubject(e.target.value)}>
+                                            {subjectList.map((s) => (
+                                                <option key={s}>{s}</option>
+                                            ))}
+                                        </select>
+                                        {editSubject === "Other" && (
+                                            <input
+                                                className="field-input"
+                                                placeholder="বিষয়ের নাম লিখুন"
+                                                value={editCustomSubject}
+                                                onChange={(e) => setEditCustomSubject(e.target.value)}
+                                                style={{ marginTop: 8 }}
+                                            />
+                                        )}
+                                    </div>
+                                )}
 
                                 {editError && (
                                     <p style={{ background: "var(--danger-bg)", color: "var(--danger)", padding: "8px 12px", borderRadius: 8, fontSize: 13, margin: 0 }}>
@@ -289,41 +368,41 @@ export default function StudentDetailPage() {
                         {attendanceRecords.length === 0 ? (
                             <p style={{ color: "var(--ink-soft)" }}>এখনো কোনো হাজিরা রেকর্ড নেই।</p>
                         ) : (
-                                <table className="ledger-table">
-                                    <thead>
-                                        <tr>
-                                            <th>তারিখ</th>
-                                            <th>প্রবেশ</th>
-                                            <th>বাহির</th>
-                                            <th className="no-print"></th>
+                            <table className="ledger-table">
+                                <thead>
+                                    <tr>
+                                        <th>তারিখ</th>
+                                        <th>প্রবেশ</th>
+                                        <th>বাহির</th>
+                                        <th className="no-print"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {attendanceRecords.map((r, i) => (
+                                        <tr key={i}>
+                                            <td>{r.date}</td>
+                                            <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{r.checkInTime || r.time || "—"}</td>
+                                            <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{r.checkOutTime || "—"}</td>
+                                            <td className="no-print">
+                                                <button
+                                                    onClick={() => handleDeleteAttendanceRecord(r)}
+                                                    style={{
+                                                        background: "none",
+                                                        border: "none",
+                                                        color: "var(--danger)",
+                                                        fontSize: 12,
+                                                        cursor: "pointer",
+                                                        textDecoration: "underline",
+                                                        padding: 0,
+                                                    }}
+                                                >
+                                                    মুছুন
+                                                </button>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        {attendanceRecords.map((r, i) => (
-                                            <tr key={i}>
-                                                <td>{r.date}</td>
-                                                <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{r.checkInTime || r.time || "—"}</td>
-                                                <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{r.checkOutTime || "—"}</td>
-                                                <td className="no-print">
-                                                    <button
-                                                        onClick={() => handleDeleteAttendanceRecord(r)}
-                                                        style={{
-                                                            background: "none",
-                                                            border: "none",
-                                                            color: "var(--danger)",
-                                                            fontSize: 12,
-                                                            cursor: "pointer",
-                                                            textDecoration: "underline",
-                                                            padding: 0,
-                                                        }}
-                                                    >
-                                                        মুছুন
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                    ))}
+                                </tbody>
+                            </table>
                         )}
                     </div>
                 </div>

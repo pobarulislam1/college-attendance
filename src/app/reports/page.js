@@ -24,13 +24,19 @@ function safe(value, fallback = "—") {
     return value;
 }
 
+function groupOrSubjectOf(s) {
+    return s.level === "ইন্টারমিডিয়েট"
+        ? (s.department && s.department !== "—" ? s.department : "—")
+        : (s.subject && s.subject !== "—" ? s.subject : "—");
+}
+
 export default function ReportsPage() {
     const [activeTab, setActiveTab] = useState("attendance");
 
     return (
         <ProtectedRoute>
             <div className="no-print">
-                <Header/>
+                <Header />
                 <PageTitle>রিপোর্ট</PageTitle>
             </div>
 
@@ -95,10 +101,12 @@ function AttendanceReportTab() {
         });
     }, [students, attendance, totalDays]);
 
+    // বিভাগ (ইন্টারমিডিয়েট) ও বিষয় (অনার্স/মাস্টার্স) দুটো থেকেই ফিল্টার অপশন তৈরি
     const deptOptions = useMemo(() => {
         const set = new Set();
         students.forEach((s) => {
-            if (s.department && s.department !== "—") set.add(s.department);
+            const val = groupOrSubjectOf(s);
+            if (val && val !== "—") set.add(val);
         });
         return ["সব", ...Array.from(set).sort()];
     }, [students]);
@@ -107,7 +115,7 @@ function AttendanceReportTab() {
         return report
             .filter((s) => filterLevel === "সব" || s.level === filterLevel)
             .filter((s) => filterYear === "সব" || s.year === filterYear)
-            .filter((s) => filterDept === "সব" || s.department === filterDept)
+            .filter((s) => filterDept === "সব" || groupOrSubjectOf(s) === filterDept)
             .filter((s) => {
                 const q = search.trim().toLowerCase();
                 if (!q) return true;
@@ -122,7 +130,7 @@ function AttendanceReportTab() {
             "নাম": safe(s.name),
             "স্তর": safe(s.level),
             "বর্ষ": safe(s.year),
-            "বিভাগ/শ্রেণি": safe(s.department),
+            "বিভাগ/বিষয়": groupOrSubjectOf(s),
             "উপস্থিত দিন": s.presentDays,
             "মোট দিন": totalDays,
             "হাজিরার হার (%)": s.percent,
@@ -151,7 +159,7 @@ function AttendanceReportTab() {
                         </select>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>বিভাগ/শ্রেণি:</label>
+                        <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>বিভাগ/বিষয়:</label>
                         <select className="field-select" value={filterDept} onChange={(e) => setFilterDept(e.target.value)} style={{ width: "auto" }}>
                             {deptOptions.map((d) => <option key={d}>{d}</option>)}
                         </select>
@@ -184,7 +192,7 @@ function AttendanceReportTab() {
                             <tr>
                                 <th>রোল</th>
                                 <th>নাম</th>
-                                <th>স্তর / বর্ষ / বিভাগ</th>
+                                <th>স্তর / বর্ষ / বিভাগ-বিষয়</th>
                                 <th>উপস্থিত</th>
                                 <th>হাজিরার হার</th>
                             </tr>
@@ -194,7 +202,7 @@ function AttendanceReportTab() {
                                 <tr key={s.id}>
                                     <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{safe(s.roll)}</td>
                                     <td>{safe(s.name)}</td>
-                                    <td>{safe(s.level)} {s.year ? `· ${s.year}` : ""} · {safe(s.department)}</td>
+                                    <td>{safe(s.level)} {s.year ? `· ${s.year}` : ""} · {groupOrSubjectOf(s)}</td>
                                     <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{s.presentDays}/{totalDays}</td>
                                     <td>
                                         <span className={`status-pill ${s.percent >= 75 ? "status-present" : "status-absent"}`}>
@@ -258,7 +266,8 @@ function VerifyReportTab() {
     const deptOptions = useMemo(() => {
         const set = new Set();
         Object.values(studentsMap).forEach((s) => {
-            if (s.department && s.department !== "—") set.add(s.department);
+            const val = groupOrSubjectOf(s);
+            if (val && val !== "—") set.add(val);
         });
         return ["সব", ...Array.from(set).sort()];
     }, [studentsMap]);
@@ -268,7 +277,7 @@ function VerifyReportTab() {
         if (!student) return false;
         if (filterLevel !== "সব" && student.level !== filterLevel) return false;
         if (filterYear !== "সব" && student.year !== filterYear) return false;
-        if (filterDept !== "সব" && student.department !== filterDept) return false;
+        if (filterDept !== "সব" && groupOrSubjectOf(student) !== filterDept) return false;
         return true;
     });
 
@@ -295,7 +304,7 @@ function VerifyReportTab() {
                         </select>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>বিভাগ/শ্রেণি:</label>
+                        <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>বিভাগ/বিষয়:</label>
                         <select className="field-select" value={filterDept} onChange={(e) => setFilterDept(e.target.value)} style={{ width: "auto" }}>
                             {deptOptions.map((d) => <option key={d}>{d}</option>)}
                         </select>
@@ -325,7 +334,7 @@ function VerifyReportTab() {
                         তারিখ: {selectedDate}
                         {filterLevel !== "সব" ? ` · স্তর: ${filterLevel}` : ""}
                         {filterYear !== "সব" ? ` · বর্ষ: ${filterYear}` : ""}
-                        {filterDept !== "সব" ? ` · বিভাগ: ${filterDept}` : ""}
+                        {filterDept !== "সব" ? ` · বিভাগ/বিষয়: ${filterDept}` : ""}
                     </p>
                 </div>
 
@@ -352,7 +361,7 @@ function VerifyReportTab() {
                                             <div className="verify-name">{safe(r.studentName)}</div>
                                             <div className="verify-meta">
                                                 রোল: {safe(r.roll)} · প্রবেশ: {safe(r.checkInTime)} · বাহির: {r.checkOutTime ? r.checkOutTime : "চলমান"}
-                                                {student ? ` · ${safe(student.level)} · ${safe(student.year)} · ${safe(student.department)}` : ""}
+                                                {student ? ` · ${safe(student.level)} · ${safe(student.year)} · ${groupOrSubjectOf(student)}` : ""}
                                             </div>
                                         </div>
                                         <span
