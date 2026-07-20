@@ -107,7 +107,7 @@ export default function Home() {
 
   return (
     <ProtectedRoute>
-      <Header title="নতুন শিক্ষার্থী" />
+      <Header/>
       <PageTitle>নতুন শিক্ষার্থী যোগ করুন</PageTitle>
       <main className="ledger-wrap">
         <div className="card-box" style={{ maxWidth: 480, margin: "0 auto" }}>

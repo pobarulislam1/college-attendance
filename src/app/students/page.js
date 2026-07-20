@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -17,17 +17,20 @@ function todayKey() {
     return `${year}-${month}-${day}`;
 }
 
-const levelOptions = ["সব", "ইন্টারমিডিয়েট", "অনার্স", "মাস্টার্স"];
-const yearOptions = ["সব", "১ম বর্ষ", "২য় বর্ষ", "৩য় বর্ষ", "৪র্থ বর্ষ"];
-const subjectList = [
-    "সব",
-    "Bangla",
-    "English",
-    "Echonomic",
-    "Physic",
-    "Accounting",
+function normalize(value) {
+    return (value || "").toString().trim().toLowerCase();
+}
 
-];
+const levelOptions = ["সব", "ইন্টারমিডিয়েট", "অনার্স", "মাস্টার্স"];
+
+const yearsByLevel = {
+    "সব": ["সব"],
+    "ইন্টারমিডিয়েট": ["সব", "১ম বর্ষ", "২য় বর্ষ"],
+    "অনার্স": ["সব", "১ম বর্ষ", "২য় বর্ষ", "৩য় বর্ষ", "৪র্থ বর্ষ"],
+    "মাস্টার্স": ["সব", "১ম বর্ষ", "২য় বর্ষ"],
+};
+
+const groupOptions = ["সব", "Science", "Arts", "Commerce"];
 
 export default function StudentsPage() {
     const router = useRouter();
@@ -36,6 +39,7 @@ export default function StudentsPage() {
     const [search, setSearch] = useState("");
     const [filterLevel, setFilterLevel] = useState("সব");
     const [filterYear, setFilterYear] = useState("সব");
+    const [filterGroup, setFilterGroup] = useState("সব");
     const [filterSubject, setFilterSubject] = useState("সব");
     const [loading, setLoading] = useState(true);
 
@@ -62,14 +66,50 @@ export default function StudentsPage() {
         setLoading(false);
     }
 
+    function handleLevelFilterChange(newLevel) {
+        setFilterLevel(newLevel);
+        const validYears = yearsByLevel[newLevel] || ["সব"];
+        if (!validYears.includes(filterYear)) {
+            setFilterYear("সব");
+        }
+        setFilterGroup("সব");
+        setFilterSubject("সব");
+    }
+
+    const isIntermediateFilter = filterLevel === "ইন্টারমিডিয়েট";
+    const isHonoursOrMastersFilter = filterLevel === "অনার্স" || filterLevel === "মাস্টার্স";
+    const currentYearOptions = yearsByLevel[filterLevel] || ["সব"];
+
+    // অনার্স/মাস্টার্সের জন্য বিষয়ের তালিকা প্রকৃত ডেটা থেকে গতিশীলভাবে তৈরি
+    const subjectOptions = useMemo(() => {
+        const seen = new Map();
+        students.forEach((s) => {
+            const levelMatches = filterLevel === "সব" ? (s.level === "অনার্স" || s.level === "মাস্টার্স") : s.level === filterLevel;
+            if (!levelMatches) return;
+            const raw = s.subject;
+            const norm = normalize(raw);
+            if (raw && norm !== "" && norm !== "—") {
+                if (!seen.has(norm)) seen.set(norm, raw);
+            }
+        });
+        return ["সব", ...Array.from(seen.values()).sort()];
+    }, [students, filterLevel]);
+
     const filteredStudents = students
         .filter((s) => filterLevel === "সব" || s.level === filterLevel)
         .filter((s) => filterYear === "সব" || s.year === filterYear)
-        .filter((s) => filterSubject === "সব" || s.subject === filterSubject)
         .filter((s) => {
-            const q = search.trim().toLowerCase();
+            if (filterGroup === "সব") return true;
+            return normalize(s.department) === normalize(filterGroup);
+        })
+        .filter((s) => {
+            if (filterSubject === "সব") return true;
+            return normalize(s.subject) === normalize(filterSubject);
+        })
+        .filter((s) => {
+            const q = normalize(search);
             if (!q) return true;
-            return s.name.toLowerCase().includes(q) || s.roll.toLowerCase().includes(q);
+            return normalize(s.name).includes(q) || normalize(s.roll).includes(q);
         });
 
     function statusLabel(roll) {
@@ -81,29 +121,64 @@ export default function StudentsPage() {
 
     return (
         <ProtectedRoute>
-            <Header />
+            <Header title="শিক্ষার্থী তালিকা" />
             <PageTitle>শিক্ষার্থী তালিকা</PageTitle>
             <main className="ledger-wrap">
                 <div className="card-box" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                             <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>স্তর:</label>
-                            <select className="field-select" value={filterLevel} onChange={(e) => setFilterLevel(e.target.value)} style={{ width: "auto" }}>
+                            <select
+                                className="field-select"
+                                value={filterLevel}
+                                onChange={(e) => handleLevelFilterChange(e.target.value)}
+                                style={{ width: "auto" }}
+                            >
                                 {levelOptions.map((l) => <option key={l}>{l}</option>)}
                             </select>
                         </div>
+
                         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                             <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>বর্ষ:</label>
-                            <select className="field-select" value={filterYear} onChange={(e) => setFilterYear(e.target.value)} style={{ width: "auto" }}>
-                                {yearOptions.map((y) => <option key={y}>{y}</option>)}
+                            <select
+                                className="field-select"
+                                value={filterYear}
+                                onChange={(e) => setFilterYear(e.target.value)}
+                                style={{ width: "auto" }}
+                            >
+                                {currentYearOptions.map((y) => <option key={y}>{y}</option>)}
                             </select>
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>বিষয়:</label>
-                            <select className="field-select" value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)} style={{ width: "auto" }}>
-                                {subjectList.map((s) => <option key={s}>{s}</option>)}
-                            </select>
-                        </div>
+
+                        {/* ইন্টারমিডিয়েট বাছা থাকলে বিভাগ ফিল্টার দেখাবে */}
+                        {isIntermediateFilter && (
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>বিভাগ:</label>
+                                <select
+                                    className="field-select"
+                                    value={filterGroup}
+                                    onChange={(e) => setFilterGroup(e.target.value)}
+                                    style={{ width: "auto" }}
+                                >
+                                    {groupOptions.map((g) => <option key={g}>{g}</option>)}
+                                </select>
+                            </div>
+                        )}
+
+                        {/* অনার্স/মাস্টার্স (বা "সব") বাছা থাকলে বিষয় ফিল্টার দেখাবে */}
+                        {!isIntermediateFilter && (
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>বিষয়:</label>
+                                <select
+                                    className="field-select"
+                                    value={filterSubject}
+                                    onChange={(e) => setFilterSubject(e.target.value)}
+                                    style={{ width: "auto" }}
+                                >
+                                    {subjectOptions.map((s) => <option key={s}>{s}</option>)}
+                                </select>
+                            </div>
+                        )}
                     </div>
 
                     <div
@@ -138,6 +213,7 @@ export default function StudentsPage() {
                         <div className="id-card-grid">
                             {filteredStudents.map((s) => {
                                 const st = statusLabel(s.roll);
+                                const studentIsIntermediate = s.level === "ইন্টারমিডিয়েট";
                                 return (
                                     <div
                                         key={s.id}
@@ -176,8 +252,9 @@ export default function StudentsPage() {
                                                     <br />
                                                     {s.level} {s.year ? `· ${s.year}` : ""}
                                                     <br />
-                                                    {s.department}
-                                                    {s.subject && s.subject !== "—" && s.subject !== "প্রযোজ্য না" ? ` · ${s.subject}` : ""}
+                                                    {studentIsIntermediate
+                                                        ? (s.department && s.department !== "—" ? s.department : "")
+                                                        : (s.subject && s.subject !== "—" ? s.subject : "")}
                                                 </div>
                                             </div>
                                         </div>
