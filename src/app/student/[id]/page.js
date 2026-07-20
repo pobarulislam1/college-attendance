@@ -77,7 +77,7 @@ export default function StudentDetailPage() {
         fillEditForm(studentData);
 
         const attendanceRef = collection(db, "attendance");
-        const attQuery = query(attendanceRef, where("roll", "==", studentData.roll));
+        const attQuery = query(attendanceRef, where("studentId", "==", studentData.id));
         const attSnap = await getDocs(attQuery);
         const records = attSnap.docs.map((d) => d.data()).sort((a, b) => b.date.localeCompare(a.date));
         setAttendanceRecords(records);
@@ -239,7 +239,7 @@ export default function StudentDetailPage() {
 
                     {!isEditing ? (
                         <div className="card-box" style={{ display: "flex", gap: 20, flexWrap: "wrap", alignItems: "center" }}>
-                            <QRCodeSVG value={`ATTEND:${student.roll}`} size={90} />
+                            <QRCodeSVG value={`ATTEND:${student.id}`} size={90} />
                             <div style={{ flex: 1, minWidth: 200 }}>
                                 <h2 style={{ fontSize: 22, margin: "0 0 8px 0" }}>{student.name}</h2>
                                 <p style={{ fontSize: 14, color: "var(--ink-soft)", margin: "2px 0" }}>রোল: {student.roll}</p>

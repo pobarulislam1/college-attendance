@@ -29,36 +29,6 @@ export default function ScanPage() {
         return `${year}-${month}-${day}`;
     }
 
-    function playBeep(type) {
-        try {
-            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-            const ctx = new AudioContextClass();
-            const oscillator = ctx.createOscillator();
-            const gainNode = ctx.createGain();
-
-            oscillator.connect(gainNode);
-            gainNode.connect(ctx.destination);
-
-            if (type === "in") {
-                oscillator.frequency.value = 880; // High Voice — Check-in
-            } else if (type === "out") {
-                oscillator.frequency.value = 523; // Medium Voice — Check-out
-            } else {
-                oscillator.frequency.value = 220; // Low Voice — Error / Unknown
-            }
-
-            oscillator.type = "sine";
-            gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
-
-            oscillator.start(ctx.currentTime);
-            oscillator.stop(ctx.currentTime + 0.25);
-        } catch (err) {
-            // The App Will Continue to Work Even If the Sound Fails to Play
-        }
-    }
-
-
     function makeThumbnail(video) {
         const thumbCanvas = document.createElement("canvas");
         const targetWidth = 160;
@@ -70,33 +40,51 @@ export default function ScanPage() {
         return thumbCanvas.toDataURL("image/jpeg", 0.5);
     }
 
-    async function checkInOrOut(roll, photoDataUrl) {
-        if (!roll) return;
+    function playBeep(type) {
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            const ctx = new AudioContextClass();
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            if (type === "in") oscillator.frequency.value = 880;
+            else if (type === "out") oscillator.frequency.value = 523;
+            else oscillator.frequency.value = 220;
+            oscillator.type = "sine";
+            gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+            oscillator.start(ctx.currentTime);
+            oscillator.stop(ctx.currentTime + 0.25);
+        } catch (err) { }
+    }
 
-        const studentsRef = collection(db, "students");
-        const studentQuery = query(studentsRef, where("roll", "==", roll));
-        const studentSnap = await getDocs(studentQuery);
-
-        if (studentSnap.empty) {
+    // ---------- মূল check-in / check-out ফাংশন — এখন studentId (ইউনিক) দিয়ে কাজ করে ----------
+    async function checkInOrOutById(studentId, photoDataUrl) {
+        const studentSnap = await getDoc(doc(db, "students", studentId));
+        if (!studentSnap.exists()) {
             playBeep("error");
-            setMessage(`অজানা কোড — রোল ${roll} এর কোনো শিক্ষার্থী নেই`);
+            setMessage("অজানা QR কোড — এই শিক্ষার্থী খুঁজে পাওয়া যায়নি");
             return;
         }
+        const student = { id: studentSnap.id, ...studentSnap.data() };
+        await processCheckInOut(student, photoDataUrl);
+    }
 
-        const student = studentSnap.docs[0].data();
+    async function processCheckInOut(student, photoDataUrl) {
         const dateKey = todayKey();
-        const docId = `${dateKey}_${roll}`;
+        const docId = `${dateKey}_${student.id}`;
         const attRef = doc(db, "attendance", docId);
         const existingSnap = await getDoc(attRef);
 
         const time = new Date().toLocaleTimeString("bn-BD", { hour: "2-digit", minute: "2-digit" });
         const nowMs = Date.now();
-        const COOLDOWN_MS = 30 * 60 * 1000; // 30 Minutes
+        const COOLDOWN_MS = 30 * 60 * 1000;
 
         if (!existingSnap.exists()) {
-            // First Scan of the Day — CHECK-IN (No Cooldown Required)
             await setDoc(attRef, {
-                roll,
+                studentId: student.id,
+                roll: student.roll,
                 studentName: student.name,
                 date: dateKey,
                 checkInTime: time,
@@ -111,8 +99,7 @@ export default function ScanPage() {
             playBeep("in");
             setMessage(`✓ ${student.name} — ক্লাসে প্রবেশ (Check-in) করা হয়েছে`);
             setLastStatus({ name: student.name, status: "in", time });
-
-            setTodayLog((prev) => [{ roll, name: student.name, time, status: "in", photo: photoDataUrl }, ...prev]);
+            setTodayLog((prev) => [{ roll: student.roll, name: student.name, time, status: "in", photo: photoDataUrl }, ...prev]);
             return;
         }
 
@@ -120,7 +107,6 @@ export default function ScanPage() {
         const lastActionAtMs = existing.lastActionAtMs || 0;
         const elapsed = nowMs - lastActionAtMs;
 
-        // The 30-Minute Cooldown Has Not Yet Expired
         if (elapsed < COOLDOWN_MS) {
             const remainingMin = Math.ceil((COOLDOWN_MS - elapsed) / 60000);
             playBeep("error");
@@ -129,7 +115,6 @@ export default function ScanPage() {
         }
 
         if (existing.status === "in") {
-            // Cooldown Has Expired — Proceed with CHECK-OUT
             await updateDoc(attRef, {
                 checkOutTime: time,
                 checkOutPhoto: photoDataUrl || null,
@@ -140,10 +125,30 @@ export default function ScanPage() {
             playBeep("out");
             setMessage(`✓ ${student.name} — ক্লাস থেকে বের হলো (Check-out) — সময়: ${time}`);
             setLastStatus({ name: student.name, status: "out", time });
-            setTodayLog((prev) => [{ roll, name: student.name, time, status: "out", photo: photoDataUrl }, ...prev]);
+            setTodayLog((prev) => [{ roll: student.roll, name: student.name, time, status: "out", photo: photoDataUrl }, ...prev]);
         } else {
             setMessage(`${student.name} — আজকের জন্য প্রবেশ ও বাহির দুটোই সম্পন্ন হয়ে গেছে`);
         }
+    }
+
+    // ---------- ম্যানুয়াল রোল-এন্ট্রি — একাধিক মিল থাকলে সতর্ক করবে ----------
+    async function checkInOrOutByRollManual(roll, photoDataUrl) {
+        const studentsRef = collection(db, "students");
+        const q = query(studentsRef, where("roll", "==", roll));
+        const snap = await getDocs(q);
+
+        if (snap.empty) {
+            playBeep("error");
+            setMessage(`অজানা কোড — রোল ${roll} এর কোনো শিক্ষার্থী নেই`);
+            return;
+        }
+        if (snap.docs.length > 1) {
+            playBeep("error");
+            setMessage(`রোল ${roll} একাধিক শিক্ষার্থীর সাথে মিলছে — দয়া করে QR কোড স্ক্যান করুন, ম্যানুয়ালি সম্ভব না`);
+            return;
+        }
+        const student = { id: snap.docs[0].id, ...snap.docs[0].data() };
+        await processCheckInOut(student, photoDataUrl);
     }
 
     async function startCamera() {
@@ -157,7 +162,7 @@ export default function ScanPage() {
             setMessage("QR কোড ক্যামেরার সামনে ধরুন");
             requestAnimationFrame(scanLoop);
         } catch (err) {
-            setMessage("ক্যামেরা চালু করা যায়নি — নিচে ম্যানুয়ালি রোল দিয়ে চেক-ইন/আউট করুন");
+            setMessage("ক্যামেরা চালু করা যায়নি — নিচে ম্যানুয়ালি রোল দিয়ে চেষ্টা করুন");
         }
     }
 
@@ -189,9 +194,9 @@ export default function ScanPage() {
                 const now = Date.now();
                 if (now - lastScanRef.current > 3000) {
                     lastScanRef.current = now;
-                    const roll = code.data.replace("ATTEND:", "");
+                    const studentId = code.data.replace("ATTEND:", "");
                     const thumbnail = makeThumbnail(video);
-                    checkInOrOut(roll, thumbnail);
+                    checkInOrOutById(studentId, thumbnail);
                 }
             }
         }
@@ -205,7 +210,7 @@ export default function ScanPage() {
     function handleManualSubmit(e) {
         e.preventDefault();
         if (!manualRoll.trim()) return;
-        checkInOrOut(manualRoll.trim(), null);
+        checkInOrOutByRollManual(manualRoll.trim(), null);
         setManualRoll("");
     }
 
@@ -222,7 +227,7 @@ export default function ScanPage() {
                             overflow: "hidden",
                             position: "relative",
                             aspectRatio: "4/3",
-                            maxWidth: 350,
+                            maxWidth: 380,
                             margin: "0 auto",
                         }}
                     >
@@ -261,6 +266,9 @@ export default function ScanPage() {
                             সাবমিট
                         </button>
                     </form>
+                    <p style={{ fontSize: 11, color: "var(--ink-soft)", marginTop: 6 }}>
+                        নোট: একাধিক শিক্ষার্থীর রোল একই হলে ম্যানুয়াল কাজ করবে না, তখন QR স্ক্যান ব্যবহার করুন।
+                    </p>
                 </div>
 
                 {lastStatus && (

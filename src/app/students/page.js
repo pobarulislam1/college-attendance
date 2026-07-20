@@ -244,7 +244,7 @@ export default function StudentsPage() {
                                             {st.text}
                                         </div>
                                         <div className="id-body">
-                                            <QRCodeSVG value={`ATTEND:${s.roll}`} size={70} />
+                                            <QRCodeSVG value={`ATTEND:${s.id}`} size={70} />
                                             <div>
                                                 <div className="name">{s.name}</div>
                                                 <div className="meta">

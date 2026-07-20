@@ -71,7 +71,7 @@ export default function Home() {
       ? group
       : (subject === "Other" ? (customSubject.trim() || "Other") : subject);
 
-    // একই স্তর + বর্ষ + বিভাগ/বিষয়ের মধ্যে রোল সংঘর্ষ যাচাই করা
+    // Check for roll number conflicts within the same level, year, and department/subject
     const studentsRef = collection(db, "students");
     const dupQuery = query(studentsRef, where("roll", "==", roll.trim()));
     const dupSnap = await getDocs(dupQuery);

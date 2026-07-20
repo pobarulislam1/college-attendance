@@ -76,9 +76,9 @@ export default function DashboardPage() {
         })
         .sort((a, b) => (a.roll || "").localeCompare(b.roll || ""));
 
-    const presentRolls = new Set(attendance.map((a) => a.roll));
+    const presentStudentIds = new Set(attendance.map((a) => a.studentId).filter(Boolean));
     const totalCount = filteredStudents.length;
-    const presentCount = filteredStudents.filter((s) => presentRolls.has(s.roll)).length;
+    const presentCount = filteredStudents.filter((s) => presentStudentIds.has(s.id).length);
     const absentCount = totalCount - presentCount;
     const percent = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
 
@@ -154,7 +154,7 @@ export default function DashboardPage() {
                                 </thead>
                                 <tbody>
                                     {filteredStudents.map((s) => {
-                                        const isPresent = presentRolls.has(s.roll);
+                                        const isPresent = presentStudentIds.has(s.id);
                                         const groupOrSubject =
                                             s.level === "ইন্টারমিডিয়েট"
                                                 ? (s.department && s.department !== "—" ? s.department : "—")

@@ -95,7 +95,7 @@ function AttendanceReportTab() {
 
     const report = useMemo(() => {
         return students.map((s) => {
-            const presentDays = attendance.filter((a) => a.roll === s.roll).length;
+            const presentDays = attendance.filter((a) => a.studentId === s.id).length;
             const percent = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0;
             return { ...s, presentDays, percent };
         });
@@ -272,14 +272,39 @@ function VerifyReportTab() {
         return ["সব", ...Array.from(set).sort()];
     }, [studentsMap]);
 
+
+    // backup code
+
+    // const map = {};
+    // studentsSnap.docs.forEach((d) => {
+    //     const data = d.data();
+    //     map[data.roll] = data;
+
+    //     if (filterLevel !== "সব" && student.level !== filterLevel) return false;
+    //     if (filterYear !== "সব" && student.year !== filterYear) return false;
+    //     if (filterDept !== "সব" && groupOrSubjectOf(student) !== filterDept) return false;
+    //     return true;
+    // });
+    // setStudentsMap(map);
+    
+
+    // studentsMap[r.studentId] 
+
     const filteredRecords = records.filter((r) => {
         const student = studentsMap[r.roll];
         if (!student) return false;
+
+        
         if (filterLevel !== "সব" && student.level !== filterLevel) return false;
         if (filterYear !== "সব" && student.year !== filterYear) return false;
         if (filterDept !== "সব" && groupOrSubjectOf(student) !== filterDept) return false;
         return true;
     });
+
+
+
+
+ 
 
     function handlePrint() {
         window.print();
@@ -352,7 +377,7 @@ function VerifyReportTab() {
 
                         <div className="card-box verify-list">
                             {filteredRecords.map((r, i) => {
-                                const student = studentsMap[r.roll];
+                                const student = studentsMap[r.studentId];
                                 const photo = r.checkInPhoto || r.checkOutPhoto;
                                 return (
                                     <div key={i} className="verify-row">
