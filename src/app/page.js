@@ -1,219 +1,198 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
 import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import ProtectedRoute from "@/lib/ProtectedRoute";
 import Header from "@/lib/Header";
 import PageTitle from "@/lib/PageTitle";
 
-const yearOptions = {
-  "ইন্টারমিডিয়েট": ["১ম বর্ষ", "২য় বর্ষ"],
-  "অনার্স": ["১ম বর্ষ", "২য় বর্ষ", "৩য় বর্ষ", "৪র্থ বর্ষ"],
-  "মাস্টার্স": ["১ম বর্ষ", "২য় বর্ষ"],
-};
+const levelOptions = ["সব", "ইন্টারমিডিয়েট", "অনার্স", "মাস্টার্স"];
+const yearOptions = ["সব", "১ম বর্ষ", "২য় বর্ষ", "৩য় বর্ষ", "৪র্থ বর্ষ"];
 
-const groupOptions = ["Science", "Arts", "Commerce"];
+export default function DashboardPage() {
+  const [students, setStudents] = useState([]);
+  const [attendance, setAttendance] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(todayKey());
+  const [search, setSearch] = useState("");
+  const [filterLevel, setFilterLevel] = useState("সব");
+  const [filterYear, setFilterYear] = useState("সব");
+  const [filterDept, setFilterDept] = useState("সব");
+  const [loading, setLoading] = useState(true);
 
-const subjectList = [
-  "Bangla",
-  "English",
-  "Economics",
-  "Political Science",
-  "History",
-  "Philosophy",
-  "Sociology",
-  "Management",
-  "Accounting",
-  "Marketing",
-  "Finance",
-  "Physics",
-  "Chemistry",
-  "Mathematics",
-  "Botany",
-  "Zoology",
-  "Psychology",
-  "Geography",
-  "Other",
-];
-
-export default function Home() {
-  const router = useRouter();
-  const [name, setName] = useState("");
-  const [roll, setRoll] = useState("");
-  const [level, setLevel] = useState("ইন্টারমিডিয়েট");
-  const [year, setYear] = useState("১ম বর্ষ");
-  const [group, setGroup] = useState("Science");
-  const [subject, setSubject] = useState("Bangla");
-  const [customSubject, setCustomSubject] = useState("");
-  const [justAdded, setJustAdded] = useState(null);
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const isIntermediate = level === "ইন্টারমিডিয়েট";
-
-  function handleLevelChange(newLevel) {
-    setLevel(newLevel);
-    setYear(yearOptions[newLevel][0]);
+  function todayKey() {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
   }
 
-  async function handleAddStudent(e) {
-    e.preventDefault();
-    setError("");
+  const loadData = useCallback(async () => {
+    setLoading(true);
 
-    if (!name.trim() || !roll.trim()) {
-      setError("নাম এবং রোল নম্বর দুটোই দিন");
-      return;
-    }
+    const studentsSnap = await getDocs(collection(db, "students"));
+    const studentsList = studentsSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    setStudents(studentsList);
 
-    const groupKey = isIntermediate
-      ? group
-      : (subject === "Other" ? (customSubject.trim() || "Other") : subject);
+    const attendanceRef = collection(db, "attendance");
+    const attendanceQuery = query(attendanceRef, where("date", "==", selectedDate));
+    const attendanceSnap = await getDocs(attendanceQuery);
+    const attendanceList = attendanceSnap.docs.map((doc) => doc.data());
+    setAttendance(attendanceList);
 
-    // Check for roll number conflicts within the same level, year, and department/subject
-    const studentsRef = collection(db, "students");
-    const dupQuery = query(studentsRef, where("roll", "==", roll.trim()));
-    const dupSnap = await getDocs(dupQuery);
-    const conflict = dupSnap.docs.find((d) => {
-      const data = d.data();
-      const dataGroupKey = data.level === "ইন্টারমিডিয়েট" ? data.department : data.subject;
-      return data.level === level && data.year === year && dataGroupKey === groupKey;
-    });
-    if (conflict) {
-      setError("এই স্তর, বর্ষ ও বিভাগ/বিষয়ে এই রোল নম্বর ইতিমধ্যে ব্যবহৃত হয়েছে, অন্য একটা রোল দিন");
-      return;
-    }
+    setLoading(false);
+  }, [selectedDate]);
 
-    setSaving(true);
-    await addDoc(collection(db, "students"), {
-      name: name.trim(),
-      roll: roll.trim(),
-      level,
-      year,
-      department: isIntermediate ? group : "—",
-      subject: isIntermediate ? "—" : groupKey,
-      createdAt: serverTimestamp(),
-    });
-    setSaving(false);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-    setJustAdded(name.trim());
-    setName("");
-    setRoll("");
-    setGroup("Science");
-    setSubject("Bangla");
-    setCustomSubject("");
-  }
+  const deptOptions = [
+    "সব",
+    ...Array.from(
+      new Set(
+        students
+          .map((s) => (s.level === "ইন্টারমিডিয়েট" ? s.department : s.subject))
+          .filter((d) => d && d !== "—")
+      )
+    ).sort(),
+  ];
+
+  const filteredStudents = students
+    .filter((s) => filterLevel === "সব" || s.level === filterLevel)
+    .filter((s) => filterYear === "সব" || s.year === filterYear)
+    .filter((s) => {
+      if (filterDept === "সব") return true;
+      const relevantField = s.level === "ইন্টারমিডিয়েট" ? s.department : s.subject;
+      return relevantField === filterDept;
+    })
+    .filter((s) => {
+      const q = search.trim().toLowerCase();
+      if (!q) return true;
+      return (s.name || "").toLowerCase().includes(q) || (s.roll || "").toLowerCase().includes(q);
+    })
+    .sort((a, b) => (a.roll || "").localeCompare(b.roll || ""));
+
+  const presentStudentIds = new Set(attendance.map((a) => a.studentId).filter(Boolean));
+  const totalCount = filteredStudents.length;
+  const presentCount = filteredStudents.filter((s) => presentStudentIds.has(s.id)).length;
+  const absentCount = totalCount - presentCount;
+  const percent = totalCount > 0 ? Math.round((presentCount / totalCount) * 100) : 0;
 
   return (
     <ProtectedRoute>
-      <Header/>
-      <PageTitle>নতুন শিক্ষার্থী যোগ করুন</PageTitle>
+      <Header title="হাজিরার ড্যাশবোর্ড" />
+      <PageTitle>হাজিরার ড্যাশবোর্ড</PageTitle>
       <main className="ledger-wrap">
-        <div className="card-box" style={{ maxWidth: 480, margin: "0 auto" }}>
-          {justAdded && (
-            <p
-              style={{
-                background: "var(--success-bg)",
-                color: "var(--success)",
-                padding: "10px 14px",
-                borderRadius: 8,
-                fontSize: 14,
-                marginTop: 0,
-              }}
-            >
-              ✓ {justAdded} যোগ করা হয়েছে।{" "}
-              <span
-                style={{ textDecoration: "underline", cursor: "pointer" }}
-                onClick={() => router.push("/students")}
-              >
-                তালিকায় দেখুন
-              </span>
-            </p>
-          )}
+        <div className="card-box" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>স্তর:</label>
+              <select className="field-select" value={filterLevel} onChange={(e) => setFilterLevel(e.target.value)} style={{ width: "auto" }}>
+                {levelOptions.map((l) => <option key={l}>{l}</option>)}
+              </select>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>বর্ষ:</label>
+              <select className="field-select" value={filterYear} onChange={(e) => setFilterYear(e.target.value)} style={{ width: "auto" }}>
+                {yearOptions.map((y) => <option key={y}>{y}</option>)}
+              </select>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <label style={{ fontSize: 13, color: "var(--ink-soft)" }}>বিভাগ/বিষয়:</label>
+              <select className="field-select" value={filterDept} onChange={(e) => setFilterDept(e.target.value)} style={{ width: "auto" }}>
+                {deptOptions.map((d) => <option key={d}>{d}</option>)}
+              </select>
+            </div>
+          </div>
 
-          <form onSubmit={handleAddStudent} style={{ display: "grid", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <label style={{ fontWeight: 600, fontSize: 14 }}>তারিখ:</label>
             <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
               className="field-input"
-              placeholder="নাম"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              style={{ width: "auto" }}
             />
-            <input
-              className="field-input"
-              placeholder="রোল নম্বর"
-              value={roll}
-              onChange={(e) => setRoll(e.target.value)}
-            />
-            <select
-              className="field-select"
-              value={level}
-              onChange={(e) => handleLevelChange(e.target.value)}
-            >
-              <option>ইন্টারমিডিয়েট</option>
-              <option>অনার্স</option>
-              <option>মাস্টার্স</option>
-            </select>
-            <select className="field-select" value={year} onChange={(e) => setYear(e.target.value)}>
-              {yearOptions[level].map((y) => (
-                <option key={y}>{y}</option>
-              ))}
-            </select>
-
-            {isIntermediate ? (
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", display: "block", marginBottom: 6 }}>
-                  বিভাগ
-                </label>
-                <select className="field-select" value={group} onChange={(e) => setGroup(e.target.value)}>
-                  {groupOptions.map((g) => (
-                    <option key={g}>{g}</option>
-                  ))}
-                </select>
-              </div>
-            ) : (
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-soft)", display: "block", marginBottom: 6 }}>
-                  বিষয় (Subject)
-                </label>
-                <select className="field-select" value={subject} onChange={(e) => setSubject(e.target.value)}>
-                  {subjectList.map((s) => (
-                    <option key={s}>{s}</option>
-                  ))}
-                </select>
-                {subject === "Other" && (
-                  <input
-                    className="field-input"
-                    placeholder="বিষয়ের নাম লিখুন"
-                    value={customSubject}
-                    onChange={(e) => setCustomSubject(e.target.value)}
-                    style={{ marginTop: 8 }}
-                  />
-                )}
-              </div>
-            )}
-
-            {error && (
-              <p
-                style={{
-                  background: "var(--danger-bg)",
-                  color: "var(--danger)",
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  fontSize: 13,
-                  margin: 0,
-                }}
-              >
-                {error}
-              </p>
-            )}
-
-            <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? "যোগ করা হচ্ছে..." : "শিক্ষার্থী যোগ করুন"}
+            <button onClick={loadData} className="btn-ghost">
+              রিফ্রেশ করুন
             </button>
-          </form>
+            <input
+              className="field-input"
+              placeholder="নাম বা রোল দিয়ে খুঁজুন..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ flex: 1, minWidth: 180 }}
+            />
+          </div>
         </div>
+
+        {loading ? (
+          <p style={{ color: "var(--ink-soft)" }}>লোড হচ্ছে...</p>
+        ) : (
+          <>
+            <div className="stat-row">
+              <StatBox label="মোট শিক্ষার্থী" value={totalCount} />
+              <StatBox label="উপস্থিত" value={presentCount} />
+              <StatBox label="অনুপস্থিত" value={absentCount} />
+              <StatBox label="হাজিরার হার" value={`${percent}%`} />
+            </div>
+
+            <div className="card-box">
+              <table className="ledger-table">
+                <thead>
+                  <tr>
+                    <th>রোল</th>
+                    <th>নাম</th>
+                    <th>স্তর / বর্ষ / বিভাগ-বিষয়</th>
+                    <th>অবস্থা</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredStudents.map((s) => {
+                    const isPresent = presentStudentIds.has(s.id);
+                    const groupOrSubject =
+                      s.level === "ইন্টারমিডিয়েট"
+                        ? (s.department && s.department !== "—" ? s.department : "—")
+                        : (s.subject && s.subject !== "—" ? s.subject : "—");
+                    return (
+                      <tr key={s.id}>
+                        <td style={{ fontFamily: "'JetBrains Mono', monospace" }}>{s.roll}</td>
+                        <td>{s.name}</td>
+                        <td>
+                          {s.level} {s.year ? `· ${s.year}` : ""} · {groupOrSubject}
+                        </td>
+                        <td>
+                          <span className={`status-pill ${isPresent ? "status-present" : "status-absent"}`}>
+                            {isPresent ? "উপস্থিত" : "অনুপস্থিত"}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {filteredStudents.length === 0 && (
+                <p style={{ color: "var(--ink-soft)", marginTop: 12 }}>
+                  এই ফিল্টার অনুযায়ী কোনো শিক্ষার্থী পাওয়া যায়নি।
+                </p>
+              )}
+            </div>
+          </>
+        )}
       </main>
     </ProtectedRoute>
+  );
+}
+
+function StatBox({ label, value }) {
+  return (
+    <div className="stat-box">
+      <div className="num">{value}</div>
+      <div className="lbl">{label}</div>
+    </div>
   );
 }

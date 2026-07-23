@@ -24,24 +24,12 @@ export default function Header({ title }) {
             }}
         >
             <div style={{ display: "flex", alignItems: "center", gap: 20, minWidth: 0 }}>
-                <h1
-                    style={{
-                        margin: 0,
-                        fontSize: 18,
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                    }}
-                >
-                    {title}
-                </h1>
                 <nav style={{ display: "flex", gap: 14, fontSize: 13.5, whiteSpace: "nowrap" }}>
-                    <Link href="/dashboard" style={{ color: "var(--indigo-dark)" }}>ড্যাশবোর্ড</Link>
-                    <Link href="/" style={{ color: "var(--indigo-dark)" }}>নতুন শিক্ষার্থী</Link>
+                    <Link href="/" style={{ color: "var(--indigo-dark)" }}>ড্যাশবোর্ড</Link>
+                    <Link href="/add-student" style={{ color: "var(--indigo-dark)" }}>নতুন শিক্ষার্থী</Link>
                     <Link href="/students" style={{ color: "var(--indigo-dark)" }}>শিক্ষার্থী তালিকা</Link>
                     <Link href="/scan" style={{ color: "var(--indigo-dark)" }}>হাজিরা নিন</Link>
                     <Link href="/reports" style={{ color: "var(--indigo-dark)" }}>রিপোর্ট</Link>
-
                 </nav>
             </div>
             <button

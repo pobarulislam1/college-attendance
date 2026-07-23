@@ -206,7 +206,7 @@ export default function StudentDetailPage() {
     if (!student) {
         return (
             <ProtectedRoute>
-                <Header title="শিক্ষার্থীর বিবরণ" />
+                <Header/>
                 <main className="ledger-wrap">
                     <div className="card-box">
                         <p>এই শিক্ষার্থী খুঁজে পাওয়া যায়নি।</p>
@@ -226,7 +226,7 @@ export default function StudentDetailPage() {
     return (
         <ProtectedRoute>
             <div className="no-print">
-                <Header title="শিক্ষার্থীর বিবরণ" />
+                <Header/>
                 <PageTitle>শিক্ষার্থীর বিবরণ</PageTitle>
             </div>
 
